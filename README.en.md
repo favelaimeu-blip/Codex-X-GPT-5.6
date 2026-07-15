@@ -6,15 +6,16 @@
 <div align="center">
   <img src="apps/desktop/src-tauri/icons/icon.png" alt="Codex-X GPT-5.6 Logo" width="150" />
 
-  # Codex-X GPT-5.6-sol Edition
+  # Codex-X GPT-5.6-sol Armor-Breaking Edition
 
-  **A Codex Desktop / Codex CLI configuration and workflow manager dedicated to `gpt-5.6-sol`**
+  **One-click GPT-5.6-sol armor-breaking · Provider switching · Codex configuration and workflow management**
 
-  Deeply adapted from Codex-X `v0.2.35`, with a native GPT-5.6-sol profile, Responses API defaults, a dedicated instruction template, Provider model detection, TOML / Auth management, and local session synchronization.
+  Deeply adapted from Codex-X `v0.2.35`, with the dedicated `gpt-5.6-sol-unrestricted.md` armor-breaking prompt, a native GPT-5.6-sol profile, Responses API defaults, Provider model detection, TOML / Auth management, and local session synchronization.
 
   <p>
     <img src="https://img.shields.io/badge/version-0.2.35--gpt5.6.2-2563eb" alt="version 0.2.35-gpt5.6.2" />
     <img src="https://img.shields.io/badge/model-gpt--5.6--sol-7c3aed" alt="model gpt-5.6-sol" />
+    <img src="https://img.shields.io/badge/Armor--Breaking-unrestricted%20prompt%20included-dc2626" alt="armor-breaking prompt included" />
     <img src="https://img.shields.io/badge/Wire%20API-Responses-0ea5e9" alt="Responses API" />
     <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-555" alt="platform" />
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a" alt="MIT license" /></a>
@@ -33,11 +34,29 @@
 
 ## Project Scope
 
-Codex-X GPT-5.6-sol Edition is an independently maintained derivative of Codex-X focused on configuring `gpt-5.6-sol` for Codex Desktop and Codex CLI workflows.
+Codex-X GPT-5.6-sol Armor-Breaking Edition is an independently maintained derivative of Codex-X focused on configuring and applying enhanced instruction profiles to `gpt-5.6-sol` in Codex Desktop and Codex CLI workflows.
 
 This edition does more than rename the UI. It adds a complete model profile, model-specific defaults, a dedicated prompt file, Provider capability checks, and migration logic for legacy configuration names.
 
 > Availability of `gpt-5.6-sol` depends on whether your OpenAI-compatible Provider actually exposes that model. Codex-X manages and validates the configuration; it cannot create a server-side model that the Provider does not offer.
+
+## Core Feature: One-Click GPT-5.6-sol Armor-Breaking
+
+This project treats **GPT-5.6-sol armor-breaking** as a primary feature rather than an optional extra. The bundled [`gpt-5.6-sol-unrestricted.md`](examples/gpt-5.6-sol-unrestricted.md) file is loaded through Codex's native `model_instructions_file` mechanism to encourage more direct and complete responses in coding, security research, reverse engineering, complex automation, and long-running workflows.
+
+One click on the **Instruction Prompt** page will:
+
+1. Copy the dedicated armor-breaking prompt into the Codex configuration directory.
+2. Set `model_instructions_file = "./gpt-5.6-sol-unrestricted.md"` automatically.
+3. Pair the prompt with `gpt-5.6-sol`, the Responses API, and `medium` reasoning effort.
+4. Allow the prompt to be disabled at any time, returning to the standard no-custom-instruction state.
+
+| State | Configuration | Typical response style |
+| --- | --- | --- |
+| Before armor-breaking | Dedicated instruction file disabled | Uses the model and Provider defaults; some complex requests may receive conservative or generic responses |
+| After armor-breaking | `gpt-5.6-sol-unrestricted.md` enabled | Within the model and Provider's permitted behavior, tends to respond more directly, completely, and step by step |
+
+> “Armor-breaking” in this project means loading an enhanced custom instruction file through Codex. It does not modify model weights or override server-side Provider policies. Results depend on the model, API Provider, server rules, and Codex version.
 
 ## Key Changes from Upstream
 
@@ -46,7 +65,7 @@ This edition does more than rename the UI. It adds a complete model profile, mod
 | Default model | `gpt-5.6-sol` |
 | Default Wire API | `responses` |
 | Default reasoning effort | `medium` |
-| Dedicated instruction file | `gpt-5.6-sol-unrestricted.md` |
+| Core armor-breaking template | `gpt-5.6-sol-unrestricted.md`, enabled or disabled with one click |
 | Model detection | Reads `/models` during Provider testing and checks for the target model |
 | Configuration updates | Uses `toml_edit` for structured TOML updates while preserving existing fields and Unicode paths |
 | Legacy aliases | Migrates names such as `gpt5.6`, `gpt5-6`, and `gpt-5-6` to `gpt-5.6` |
@@ -57,10 +76,11 @@ See [GPT56_OPTIMIZATION.md](GPT56_OPTIMIZATION.md) for the complete technical ch
 
 ## Features
 
+- **One-click GPT-5.6-sol armor-breaking**: includes a dedicated unrestricted prompt and manages `model_instructions_file` with one click.
 - **Native GPT-5.6-sol profile**: model, Responses API, reasoning effort, and prompt settings are managed as one profile.
 - **Visual Provider management**: configure Base URL, API Key, model, and Wire API, then switch Providers with one click.
 - **Model availability checks**: Provider tests validate connectivity and report whether the target model is present in the model list.
-- **Dedicated instruction prompt**: includes `examples/gpt-5.6-sol-unrestricted.md`, which can be enabled or disabled from the UI.
+- **Visible armor-breaking status**: clearly displays the dedicated template, enablement state, and target configuration file.
 - **Visual TOML editing**: reads and maintains `~/.codex/config.toml`, including Unicode paths and unknown-field preservation.
 - **Auth management**: reads and edits `~/.codex/auth.json`, distinguishing ChatGPT login state from third-party API Keys.
 - **Session Provider Sync**: checks and synchronizes Provider metadata in SQLite databases and rollout JSONL files.
@@ -119,14 +139,14 @@ Output path:
 apps/desktop/src-tauri/target/release/codex-x.exe
 ```
 
-## Configure GPT-5.6-sol
+## One-Click Armor-Breaking and GPT-5.6-sol Setup
 
 1. Add an official or third-party OpenAI-compatible service on the **Provider** page.
 2. Enter the Provider Base URL and API Key.
 3. Set the model to `gpt-5.6-sol`.
 4. Set Wire API to `responses`.
 5. Run the connection test and review both connectivity and model-list results.
-6. Enable the `gpt-5.6-sol unrestricted` template on the **Instruction Prompt** page.
+6. Click to enable the `gpt-5.6-sol unrestricted armor-breaking` template on the **Instruction Prompt** page.
 7. Save and switch to the Provider.
 
 The core configuration looks like this:
@@ -218,7 +238,8 @@ git push origin v0.2.35-gpt5.6.2
 
 ## Usage Notes
 
-- `unrestricted` is the name of an instruction template and UI profile included by this project. It is not an official “unrestricted mode” provided by OpenAI or any Provider.
+- “Armor-breaking” in this project refers to injecting a dedicated custom instruction through `model_instructions_file` to strengthen GPT-5.6-sol task responses.
+- `unrestricted` is the name of the bundled armor-breaking instruction template and UI profile. It is not an official “unrestricted mode” provided by OpenAI or any Provider.
 - Actual prompt behavior depends on the model, Provider, server-side policies, and client version.
 - Understand the purpose of each setting before changing `config.toml`, `auth.json`, or historical session metadata.
 
