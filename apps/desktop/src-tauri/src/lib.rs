@@ -1331,8 +1331,8 @@ fn bundled_prompt_metas() -> [BundledPromptMeta; 4] {
             id: "gpt-5.6-sol-unrestricted",
             filename: INSTRUCTION_56_FILENAME,
             title: "gpt-5.6-sol unrestricted 破甲",
-            subtitle: "GPT-5.6-sol 专用模板（Responses API）",
-            badge: "5.6 推荐",
+            subtitle: "GPT-5.6-sol 专用 unrestricted 指令提示词",
+            badge: "unrestricted",
             content: INSTRUCTION_56_CONTENT,
         },
         BundledPromptMeta {

@@ -1,6 +1,6 @@
 # Codex-X GPT-5.6 优化版
 
-当前版本：`0.2.35-gpt5.6.1`
+当前版本：`0.2.35-gpt5.6.2`
 
 这是基于 Codex-X v0.2.35 的 GPT-5.6-sol 原生优化版本。正式便携版直接使用当前用户的 `~/.codex` 和 `~/.codexx`，可接管原 Codex-X 的供应商、提示词和配置数据。
 
@@ -9,7 +9,7 @@
 - 默认模型：`gpt-5.6-sol`
 - 默认 Wire API：`responses`
 - 默认推理强度：`medium`
-- 内置 `gpt-5.6-sol-unrestricted.md` 专用执行配置
+- 内置 `gpt-5.6-sol-unrestricted.md` unrestricted 指令提示词
 - 供应商连接测试同时读取 `/models` 并确认目标模型是否存在
 - GPT-5.6-sol 选项、推荐说明和检测结果直接显示在界面中
 - 使用 `toml_edit` 结构化维护配置，保留中文项目路径

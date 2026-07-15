@@ -2,9 +2,11 @@
 
 All notable changes to Codex-X will be documented here.
 
-## [v0.2.35-gpt5.6.1] - 2026-07-15
+## [v0.2.35-gpt5.6.2] - 2026-07-15
 
 ### GPT-5.6-sol 原生适配
+
+- 将模板显示名称统一为 `gpt-5.6-sol unrestricted 破甲`，移除容易误解的“隔离验证 / 编码代理工作流”展示文案。
 
 - 新增集中式模型配置档案，将 `gpt-5.6-sol` 设为本分支默认模型，并提供 GPT-5.5、GPT-5.4 与自定义模型兼容入口。
 - GPT-5.6-sol 默认使用 Responses API 和 `medium` 推理强度，供应商表单、官方配置和 TOML 预览统一采用模型档案中的默认值。

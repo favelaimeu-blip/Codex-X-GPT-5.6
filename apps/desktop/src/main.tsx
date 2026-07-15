@@ -305,9 +305,9 @@ const bundledInstructionTemplates: InstructionTemplate[] = [
   {
     id: "gpt-5.6-sol-unrestricted",
     filename: "gpt-5.6-sol-unrestricted.md",
-    title: "GPT-5.6-sol 专用执行配置",
-    subtitle: "Responses API · 隔离验证 · 编码代理工作流",
-    badge: "5.6 专用",
+    title: "gpt-5.6-sol unrestricted 破甲",
+    subtitle: "GPT-5.6-sol 专用 unrestricted 指令提示词",
+    badge: "unrestricted",
   },
   {
     id: "gpt5.5-unrestricted",
@@ -1176,9 +1176,9 @@ function App() {
         ? {
           id,
           filename,
-          title: lang === "zh" ? "GPT-5.6-sol 专用执行配置" : "GPT-5.6-sol dedicated execution profile",
-          subtitle: lang === "zh" ? "Responses API · 隔离验证 · 编码代理工作流" : "Responses API · isolated validation · coding-agent workflow",
-          badge: lang === "zh" ? "5.6 专用" : "5.6 native",
+          title: "gpt-5.6-sol unrestricted 破甲",
+          subtitle: lang === "zh" ? "GPT-5.6-sol 专用 unrestricted 指令提示词" : "GPT-5.6-sol dedicated unrestricted prompt",
+          badge: "unrestricted",
         }
         : { id, filename, title, subtitle, badge });
   }, [activeBuiltinTemplateId, builtinPromptStatus, lang]);
