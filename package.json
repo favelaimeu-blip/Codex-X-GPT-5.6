@@ -1,7 +1,7 @@
 {
   "name": "codex-x-workspace",
   "private": true,
-  "version": "0.2.35-gpt56.1",
+  "version": "0.2.35-gpt5.6.1",
   "scripts": {
     "dev": "pnpm --dir apps/desktop tauri dev",
     "build": "pnpm --dir apps/desktop tauri build",

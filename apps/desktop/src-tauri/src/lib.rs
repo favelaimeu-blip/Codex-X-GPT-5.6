@@ -482,7 +482,7 @@ fn app_home() -> Result<PathBuf> {
                 return Ok(PathBuf::from(trimmed));
             }
         }
-        Ok(home_dir()?.join(".codexx-gpt56"))
+    Ok(home_dir()?.join(".codexx"))
     }
 }
 

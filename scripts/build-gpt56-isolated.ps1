@@ -96,7 +96,7 @@ $cargoText = [System.IO.File]::ReadAllText($cargoToml, [Text.Encoding]::UTF8)
 $rustVersionMatch = [regex]::Match($cargoText, '(?m)^rust-version\s*=\s*"([^"]+)"')
 $rustToolchain = if ($rustVersionMatch.Success) { "$($rustVersionMatch.Groups[1].Value)-x86_64-pc-windows-msvc" } else { "stable-x86_64-pc-windows-msvc" }
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$releaseRoot = Join-Path $OutputRoot ("Codex-X-GPT56-{0}-{1}" -f $version, $stamp)
+$releaseRoot = Join-Path $OutputRoot ("Codex-X-GPT-5.6-{0}-{1}" -f $version, $stamp)
 $portableRoot = Join-Path $releaseRoot "portable"
 $prebuildReportPath = Join-Path $releaseRoot "gpt56-prebuild-report.json"
 $reportPath = Join-Path $releaseRoot "gpt56-isolation-report.json"
@@ -181,12 +181,12 @@ try {
     if (-not $NativeInstaller) {
         $buildArguments += "--no-bundle"
     }
-    Invoke-NativeChecked -FilePath $pnpm -ArgumentList $buildArguments -Label "Build Codex-X GPT56"
+    Invoke-NativeChecked -FilePath $pnpm -ArgumentList $buildArguments -Label "Build Codex-X GPT-5.6"
 
     $targetRelease = Join-Path $desktopRoot "src-tauri\target\release"
     $executableCandidates = @(
         (Join-Path $targetRelease "codex-x.exe"),
-        (Join-Path $targetRelease "Codex-X GPT56.exe")
+        (Join-Path $targetRelease "Codex-X GPT-5.6.exe")
     )
     $builtExecutable = $executableCandidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
     if ([string]::IsNullOrWhiteSpace($builtExecutable)) {
@@ -194,24 +194,24 @@ try {
     }
 
     New-Item -ItemType Directory -Force -Path $portableRoot | Out-Null
-    $portableExecutable = Join-Path $portableRoot "Codex-X GPT56.exe"
+    $portableExecutable = Join-Path $portableRoot "Codex-X GPT-5.6.exe"
     Copy-Item -LiteralPath $builtExecutable -Destination $portableExecutable -Force
-    Copy-Item -LiteralPath $launcherSource -Destination (Join-Path $portableRoot "Start-Codex-X-GPT56.ps1") -Force
+    Copy-Item -LiteralPath $launcherSource -Destination (Join-Path $portableRoot "Start-Codex-X-GPT-5.6.ps1") -Force
     Copy-Item -LiteralPath (Join-Path $ProjectRoot "GPT56_OPTIMIZATION.md") -Destination (Join-Path $portableRoot "GPT56_OPTIMIZATION.md") -Force
     Copy-Item -LiteralPath (Join-Path $ProjectRoot "LICENSE") -Destination (Join-Path $portableRoot "LICENSE") -Force
 
     $cmdLauncher = @'
 @echo off
 setlocal
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Start-Codex-X-GPT56.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Start-Codex-X-GPT-5.6.ps1"
 endlocal
 '@
-    [System.IO.File]::WriteAllText((Join-Path $portableRoot "Launch-Codex-X-GPT56.cmd"), $cmdLauncher, [Text.Encoding]::ASCII)
+    [System.IO.File]::WriteAllText((Join-Path $portableRoot "Launch-Codex-X-GPT-5.6.cmd"), $cmdLauncher, [Text.Encoding]::ASCII)
 
     $portableReadme = @"
-Codex-X GPT56 $version - isolated portable build
+Codex-X GPT-5.6 $version - isolated portable build
 
-Start with: Launch-Codex-X-GPT56.cmd
+Start with: Launch-Codex-X-GPT-5.6.cmd
 
 The launcher sets process-local paths:
   CODEX_HOME  = .\data\codex
@@ -229,10 +229,10 @@ registry or user-level environment variables.
     }
 
     $hash = (Get-FileHash -LiteralPath $portableExecutable -Algorithm SHA256).Hash
-    [System.IO.File]::WriteAllText((Join-Path $portableRoot "SHA256.txt"), "$hash  Codex-X GPT56.exe`r`n", [Text.Encoding]::ASCII)
+    [System.IO.File]::WriteAllText((Join-Path $portableRoot "SHA256.txt"), "$hash  Codex-X GPT-5.6.exe`r`n", [Text.Encoding]::ASCII)
 
     if (-not $NoZip) {
-        $zipPath = Join-Path $releaseRoot ("Codex-X-GPT56-{0}-portable.zip" -f $version)
+        $zipPath = Join-Path $releaseRoot ("Codex-X-GPT-5.6-{0}-portable.zip" -f $version)
         Compress-Archive -Path (Join-Path $portableRoot "*") -DestinationPath $zipPath -CompressionLevel Optimal -Force
         Write-Host "Portable ZIP: $zipPath"
     }

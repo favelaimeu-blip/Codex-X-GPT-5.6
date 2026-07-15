@@ -1,6 +1,6 @@
 {
   "name": "codex-x",
-  "version": "0.2.35-gpt56.1",
+  "version": "0.2.35-gpt5.6.1",
   "private": true,
   "description": "Codex Switch & Instruct desktop manager",
   "type": "module",

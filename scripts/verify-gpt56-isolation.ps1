@@ -122,9 +122,9 @@ $cargoVersion = if ($cargoVersionMatch.Success) { $cargoVersionMatch.Groups[1].V
 $rustVersionMatch = [regex]::Match($cargoText, '(?m)^rust-version\s*=\s*"([^"]+)"')
 $rustToolchain = if ($rustVersionMatch.Success) { "$($rustVersionMatch.Groups[1].Value)-x86_64-pc-windows-msvc" } else { "stable-x86_64-pc-windows-msvc" }
 
-Add-Check -Name "Unique product name" -Passed ($tauri.productName -eq "Codex-X GPT56") -Details ([string]$tauri.productName)
-Add-Check -Name "Unique application identifier" -Passed ($tauri.identifier -eq "com.yynxxxxx.codexx.gpt56") -Details ([string]$tauri.identifier)
-Add-Check -Name "GPT56 prerelease version" -Passed ([string]$tauri.version).Contains("gpt56") -Details ([string]$tauri.version)
+Add-Check -Name "Unique product name" -Passed ($tauri.productName -eq "Codex-X GPT-5.6") -Details ([string]$tauri.productName)
+Add-Check -Name "Unique application identifier" -Passed ($tauri.identifier -eq "com.yynxxxxx.codexx") -Details ([string]$tauri.identifier)
+Add-Check -Name "GPT56 prerelease version" -Passed ([string]$tauri.version).Contains("gpt5.6") -Details ([string]$tauri.version)
 $versionsMatch = ($rootPackage.version -eq $desktopPackage.version) -and ($rootPackage.version -eq $tauri.version) -and ($rootPackage.version -eq $cargoVersion)
 Add-Check -Name "Version synchronization" -Passed $versionsMatch -Details "root=$($rootPackage.version), desktop=$($desktopPackage.version), tauri=$($tauri.version), cargo=$cargoVersion"
 
@@ -135,7 +135,7 @@ Test-TextContains -Path $profilesPath -Needle 'reasoningEffort: "medium"' -Name 
 Test-TextContains -Path $constantsPath -Needle 'gpt-5.6-sol-unrestricted.md' -Name "Bundled GPT56 prompt"
 Test-TextContains -Path $libPath -Needle 'std::env::var("CODEX_HOME")' -Name "CODEX_HOME override"
 Test-TextContains -Path $libPath -Needle 'std::env::var("CODEXX_HOME")' -Name "CODEXX_HOME override"
-Test-TextContains -Path $libPath -Needle 'join(".codexx-gpt56")' -Name "Distinct default app data directory"
+Test-TextContains -Path $libPath -Needle 'join(".codexx")' -Name "Distinct default app data directory"
 
 $profile = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
 $realCodexHome = Get-NormalizedPath (Join-Path $profile ".codex")

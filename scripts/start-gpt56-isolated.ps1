@@ -34,14 +34,14 @@ function Assert-OutsideRealCodexHome {
 
 $scriptDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 $portableRoot = Split-Path -Parent $scriptDirectory
-if (-not (Test-Path -LiteralPath (Join-Path $portableRoot "Codex-X GPT56.exe"))) {
+if (-not (Test-Path -LiteralPath (Join-Path $portableRoot "Codex-X GPT-5.6.exe"))) {
     # When this source script is run directly, its parent is the repository root.
     $portableRoot = $scriptDirectory
 }
 
 if ([string]::IsNullOrWhiteSpace($ExePath)) {
     $candidates = @(
-        (Join-Path $portableRoot "Codex-X GPT56.exe"),
+        (Join-Path $portableRoot "Codex-X GPT-5.6.exe"),
         (Join-Path $portableRoot "codex-x.exe"),
         (Join-Path $portableRoot "Codex-X.exe")
     )
@@ -49,7 +49,7 @@ if ([string]::IsNullOrWhiteSpace($ExePath)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($ExePath) -or -not (Test-Path -LiteralPath $ExePath -PathType Leaf)) {
-    throw "Codex-X GPT56 executable not found. Pass -ExePath explicitly or keep this launcher beside the portable executable."
+    throw "Codex-X GPT-5.6 executable not found. Pass -ExePath explicitly or keep this launcher beside the portable executable."
 }
 
 $ExePath = Get-NormalizedPath $ExePath
@@ -78,7 +78,7 @@ try {
     $env:CODEXX_HOME = $codexxHome
     $env:CODEXX_GPT56_ISOLATED = "1"
 
-    Write-Host "Starting Codex-X GPT56 in isolated mode"
+    Write-Host "Starting Codex-X GPT-5.6 in isolated mode"
     Write-Host "  CODEX_HOME : $codexHome"
     Write-Host "  CODEXX_HOME: $codexxHome"
 
