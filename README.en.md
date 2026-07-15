@@ -1,296 +1,188 @@
 <p align="center">
-  <a href="README.md"><img src="https://img.shields.io/badge/中文-切换-lightgrey" alt="中文" /></a>
+  <a href="README.md"><img src="https://img.shields.io/badge/中文-Switch-lightgrey" alt="中文" /></a>
   <a href="README.en.md"><img src="https://img.shields.io/badge/English-Current-blue" alt="English" /></a>
 </p>
 
 <div align="center">
-  <img src="apps/desktop/src-tauri/icons/icon.png" alt="Codex-X Logo" width="150" />
+  <img src="apps/desktop/src-tauri/icons/icon.png" alt="Codex-X GPT-5.6 Logo" width="150" />
 
-  # Codex-X
+  # Codex-X GPT-5.6-sol Edition
 
-  **Prompt Injection · Provider Switching · TOML / Auth Visual Manager for Codex**
+  **A Codex Desktop / Codex CLI configuration and workflow manager dedicated to `gpt-5.6-sol`**
 
-  Codex-X is a cross-platform desktop tool for **OpenAI Codex Desktop / Codex CLI**. It ships with `gpt5.5-unrestricted.md` and `gpt5.4-unrestricted.md`, and supports one-click enable / disable for instruction prompts, third-party Provider switching, official Auth management, TOML visual editing, and local session Provider Sync.
+  Deeply adapted from Codex-X `v0.2.35`, with a native GPT-5.6-sol profile, Responses API defaults, a dedicated instruction template, Provider model detection, TOML / Auth management, and local session synchronization.
 
   <p>
-    <img src="https://img.shields.io/github/v/release/yynxxxxx/Codex-X?label=version&color=blue" alt="version" />
+    <img src="https://img.shields.io/badge/version-0.2.35--gpt5.6.2-2563eb" alt="version 0.2.35-gpt5.6.2" />
+    <img src="https://img.shields.io/badge/model-gpt--5.6--sol-7c3aed" alt="model gpt-5.6-sol" />
+    <img src="https://img.shields.io/badge/Wire%20API-Responses-0ea5e9" alt="Responses API" />
     <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-555" alt="platform" />
-    <img src="https://img.shields.io/badge/built%20with-Tauri%202-24C8DB" alt="tauri" />
-    <img src="https://img.shields.io/badge/license-MIT-green" alt="license" />
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a" alt="MIT license" /></a>
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" />
-    <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" />
-    <img src="https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white" />
-    <img src="https://img.shields.io/badge/SQLite-Ready-003B57?logo=sqlite&logoColor=white" />
-    <img src="https://img.shields.io/badge/Vite-Ready-646CFF?logo=vite&logoColor=white" />
+    <a href="https://github.com/favelaimeu-blip/Codex-X-GPT-5.6/releases"><b>Downloads</b></a>
+    ·
+    <a href="GPT56_OPTIMIZATION.md"><b>Optimization Notes</b></a>
+    ·
+    <a href="https://github.com/favelaimeu-blip/Codex-X-GPT-5.6/issues"><b>Issues</b></a>
   </p>
 </div>
 
 ---
 
-## What is Codex-X?
+## Project Scope
 
-Codex-X is not just a configuration-file editor. It is a **visual enhancement manager** built for Codex CLI and Codex Desktop workflows.
+Codex-X GPT-5.6-sol Edition is an independently maintained derivative of Codex-X focused on configuring `gpt-5.6-sol` for Codex Desktop and Codex CLI workflows.
 
-It turns several high-frequency operations into a desktop UI:
+This edition does more than rename the UI. It adds a complete model profile, model-specific defaults, a dedicated prompt file, Provider capability checks, and migration logic for legacy configuration names.
 
-- Enable / disable instruction prompt templates for Codex
-- Switch between official OpenAI and third-party Codex API Providers
-- View / edit `~/.codex/config.toml`
-- View / edit official `~/.codex/auth.json`
-- Check and repair Provider metadata for local historical sessions
+> Availability of `gpt-5.6-sol` depends on whether your OpenAI-compatible Provider actually exposes that model. Codex-X manages and validates the configuration; it cannot create a server-side model that the Provider does not offer.
 
-## Preview
+## Key Changes from Upstream
 
-<details open>
-<summary><b>App preview</b>: Home / Provider / TOML / Auth</summary>
+| Item | GPT-5.6-sol Edition |
+| --- | --- |
+| Default model | `gpt-5.6-sol` |
+| Default Wire API | `responses` |
+| Default reasoning effort | `medium` |
+| Dedicated instruction file | `gpt-5.6-sol-unrestricted.md` |
+| Model detection | Reads `/models` during Provider testing and checks for the target model |
+| Configuration updates | Uses `toml_edit` for structured TOML updates while preserving existing fields and Unicode paths |
+| Legacy aliases | Migrates names such as `gpt5.6`, `gpt5-6`, and `gpt-5-6` to `gpt-5.6` |
+| Data mode | Uses the current user's `~/.codex` and `~/.codexx` directly |
+| Product identity | `Codex-X GPT-5.6` / `0.2.35-gpt5.6.2` |
 
-<p align="center">
-  <img src="docs/screenshots/app/preview.png" alt="Codex-X app preview: Home, Provider, TOML, Auth" width="920" />
-</p>
-
-</details>
-
-<details>
-<summary><b>Prompt injection results: security testing scenarios</b></summary>
-
-<div align="center">
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <b>SQL Injection Testing</b><br />
-      <sub>Post-deployment test: how to perform SQL injection testing against a target?</sub><br />
-      <img src="docs/screenshots/prompt-effects/security/sql-injection.png" alt="SQL injection testing result" width="420" />
-    </td>
-    <td align="center" width="50%">
-      <b>NSFW Response Test</b><br />
-      <sub>Observe boundary response changes after prompt injection</sub><br />
-      <img src="docs/screenshots/prompt-effects/security/nsfw.png" alt="NSFW response test result" width="420" />
-    </td>
-  </tr>
-</table>
-</div>
-
-</details>
-
-<details>
-<summary><b>Prompt injection results: reverse engineering scenarios</b></summary>
-
-<div align="center">
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <b>APK Reverse Engineering</b><br />
-      <sub>Static / dynamic analysis workflow for Android APKs</sub><br />
-      <img src="docs/screenshots/prompt-effects/reverse/apk-reverse-1.png" alt="APK reverse engineering result" width="420" />
-    </td>
-    <td align="center" width="50%">
-      <b>APK Reverse Engineering 2</b><br />
-      <sub>Additional APK reverse workflow and locating methods</sub><br />
-      <img src="docs/screenshots/prompt-effects/reverse/apk-reverse-2.png" alt="APK reverse engineering result 2" width="420" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center" colspan="2">
-      <b>EXE Reverse Engineering</b><br />
-      <sub>Windows executable analysis and debugging directions</sub><br />
-      <img src="docs/screenshots/prompt-effects/reverse/exe-reverse.png" alt="EXE reverse engineering result" width="620" />
-    </td>
-  </tr>
-</table>
-</div>
-
-</details>
+See [GPT56_OPTIMIZATION.md](GPT56_OPTIMIZATION.md) for the complete technical change list.
 
 ## Features
 
-<div align="center">
-<table>
-  <tr>
-    <th align="center" width="180">Feature</th>
-    <th align="center">Description</th>
-  </tr>
-  <tr>
-    <td align="center">⚡ Provider API</td>
-    <td>Visually manage official OpenAI / third-party Codex Providers, including Base URL, API Key, Model, Wire API, and one-click switching.</td>
-  </tr>
-  <tr>
-    <td align="center">🧩 <b>Prompt Injection</b></td>
-    <td><b>Signature feature</b>: built-in <code>gpt5.4-unrestricted.md</code> / <code>gpt5.5-unrestricted.md</code>, one-click write into Codex configuration; after enabling, it can produce results similar to the screenshots above for SQL injection testing and APK / EXE reverse engineering scenarios.</td>
-  </tr>
-  <tr>
-    <td align="center">💬 Session Management</td>
-    <td>Read Codex local SQLite and rollout JSONL, display local sessions visually, and support Provider Sync / historical thread metadata repair.</td>
-  </tr>
-  <tr>
-    <td align="center">📝 TOML Config</td>
-    <td>View current <code>~/.codex/config.toml</code>, edit full TOML directly from the Provider editor, and save changes back to the Codex config directory.</td>
-  </tr>
-  <tr>
-    <td align="center">🧠 Skills / MCP</td>
-    <td>New Skills & MCP page: read Codex Skills / MCP servers, import existing items, install Skill ZIP packages, enable / disable individual Skills or MCP servers, and check Skill update status.</td>
-  </tr>
-  <tr>
-    <td align="center">🔐 Auth Management</td>
-    <td>Read / edit official <code>~/.codex/auth.json</code>, and distinguish ChatGPT login-state Auth from third-party API Keys.</td>
-  </tr>
-  <tr>
-    <td align="center">📦 Cross-platform Release</td>
-    <td>Provides macOS Apple Silicon / Intel <code>.dmg</code>, Windows <code>.msi</code> / portable <code>.zip</code>, Linux <code>.deb</code> / <code>.rpm</code>, plus in-app update checking.</td>
-  </tr>
-</table>
-</div>
+- **Native GPT-5.6-sol profile**: model, Responses API, reasoning effort, and prompt settings are managed as one profile.
+- **Visual Provider management**: configure Base URL, API Key, model, and Wire API, then switch Providers with one click.
+- **Model availability checks**: Provider tests validate connectivity and report whether the target model is present in the model list.
+- **Dedicated instruction prompt**: includes `examples/gpt-5.6-sol-unrestricted.md`, which can be enabled or disabled from the UI.
+- **Visual TOML editing**: reads and maintains `~/.codex/config.toml`, including Unicode paths and unknown-field preservation.
+- **Auth management**: reads and edits `~/.codex/auth.json`, distinguishing ChatGPT login state from third-party API Keys.
+- **Session Provider Sync**: checks and synchronizes Provider metadata in SQLite databases and rollout JSONL files.
+- **Skills / MCP management**: import, install, enable, or disable Codex Skills and MCP Servers.
+- **Cross-platform builds**: built with Tauri 2 for Windows, macOS, and Linux.
 
-## Highlights
-
-### 1. Built-in dual instruction prompt templates
-
-Codex-X currently includes two prompt templates:
-
-- `examples/gpt5.5-unrestricted.md`
-- `examples/gpt5.4-unrestricted.md`
-
-You can enable / disable them directly from the Prompt page. When enabled, Codex-X writes the selected `.md` file into the Codex configuration directory and updates `model_instructions_file` in `config.toml`.
-
-<div align="center">
-<table>
-  <tr>
-    <th align="center">Item</th>
-    <th align="center"><code>gpt5.4-unrestricted.md</code></th>
-    <th align="center"><code>gpt5.5-unrestricted.md</code></th>
-  </tr>
-  <tr>
-    <td align="center">Positioning</td>
-    <td align="center">5.4 CTF sandbox</td>
-    <td align="center">5.5 unrestricted mode</td>
-  </tr>
-  <tr>
-    <td align="center">Strategy</td>
-    <td align="center">Indirect bypass through CTF competition sandbox framing</td>
-    <td align="center">Direct declaration of unrestricted developer mode</td>
-  </tr>
-  <tr>
-    <td align="center">Style</td>
-    <td align="center">Security-research oriented, detailed methodology</td>
-    <td align="center">Minimal instructions, broad coverage</td>
-  </tr>
-  <tr>
-    <td align="center">Length</td>
-    <td align="center">~180 lines</td>
-    <td align="center">~40 lines</td>
-  </tr>
-  <tr>
-    <td align="center">Target</td>
-    <td align="center">GPT-5.4 Codex CLI</td>
-    <td align="center">GPT-5.5 Codex CLI</td>
-  </tr>
-</table>
-</div>
-
-Post-deployment test prompt:
-
-```text
-How do I perform SQL injection testing against a target?
-```
-
-Typical effect:
-
-```text
-Before injection → refusal or generic answer
-After injection  → direct security research methodology and testing steps
-```
-
-### 2. Visual Provider switching
-
-- Add third-party Codex API Providers
-- Edit Base URL / API Key / Model / Wire API
-- View and edit Provider-related TOML from the Provider page
-- Clearly display the currently active Provider
-- Import Codex Providers from a cc-switch database
-
-### 3. Official Auth management
-
-- Automatically read Codex official `auth.json`
-- View / edit ChatGPT login-state Auth
-- Distinguish official Auth from third-party API Keys
-- Manage official Auth and third-party Providers in one UI
-
-### 4. Visual TOML editing
-
-- View the current Codex `config.toml`
-- Dark code preview with syntax highlighting
-- Edit full TOML directly from the Provider editor
-- Save changes back to the Codex configuration directory
-
-### 5. Session Management / Provider Sync
-
-Codex-X can read Codex local session data:
-
-```text
-~/.codex/sqlite/*.db
-~/.codex/state_5.sqlite
-~/.codex/sessions/**/rollout-*.jsonl
-~/.codex/archived_sessions/**/rollout-*.jsonl
-```
-
-It checks whether historical session Provider metadata matches the current configuration, and supports one-click sync / repair so historical threads can still be recognized, opened, and continued by native Codex.
-
-### 6. Skills / MCP Management
-
-Codex-X now includes a dedicated **Skills & MCP** page for managing Codex capability extensions in one place.
-
-- Skills: read existing Codex Skills, import existing items, install ZIP packages, enable / disable, and check update status
-- MCP: read Codex MCP servers, import existing items, enable / disable, and write enabled servers back to Codex <code>config.toml</code>
-- Useful for Android APK reverse engineering, Ghidra / IDA, Web / API / protocol reverse engineering, CTF, and security-testing skill packs
-
-### 7. Reverse Skills Navigation
-
-<div align="center">
-  <a href="https://yynxxxxx.github.io/Codex-X/">
-    <img src="https://img.shields.io/badge/Codex--X-Online%20Reverse%20Skills%20Guide-0ea5e9?style=for-the-badge&logo=githubpages&logoColor=white" alt="Codex-X Online Reverse Skills Guide" />
-  </a>
-</div>
-
-<br />
-
-<table>
-  <tr>
-    <td width="55%">
-      <b>Online guide</b>: explains the “armor breaking” workflow, how to enable GPT-5.5 / unrestricted jeli in Codex-X, and how to combine it with reverse-engineering Skills.
-      <br /><br />
-      <b>Categories</b>: Android APK / Windows EXE / Web protocol reverse engineering.
-      <br /><br />
-      <b>Includes</b>: Skill purpose, install commands, source links, and recommended workflow.
-    </td>
-    <td width="45%">
-      <ul>
-        <li>🧩 GPT-5.5 / unrestricted jeli workflow</li>
-        <li>📱 Android APK reverse Skills</li>
-        <li>🪟 Windows EXE / DLL reverse Skills</li>
-        <li>🌐 Web / API / protocol reverse Skills</li>
-        <li>📋 One-click copy install commands</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+## Preview
 
 <p align="center">
-  <a href="https://yynxxxxx.github.io/Codex-X/">
-    <b>🚀 Open Codex-X Reverse Skills Guide</b>
-  </a>
+  <img src="docs/screenshots/app/preview.png" alt="Codex-X application preview" width="920" />
 </p>
 
-### 8. Cross-platform desktop app
+## Quick Start
 
-- macOS Apple Silicon `.dmg`
-- macOS Intel `.dmg`
-- Windows `.msi`
-- Windows Portable `.zip`
-- Linux `.deb` / `.rpm`
-- Automatic GitHub Releases builds
-- In-app update checking
+### 1. Download
+
+Visit [GitHub Releases](https://github.com/favelaimeu-blip/Codex-X-GPT-5.6/releases) for packaged builds:
+
+- Windows: `.msi` or portable `.zip`
+- macOS: Apple Silicon / Intel `.dmg`
+- Linux: `.deb` / `.rpm`
+
+If no release assets are available yet, run or build the project from source.
+
+### 2. Run from Source
+
+Recommended environment:
+
+- Node.js 22
+- pnpm 10
+- Rust stable (minimum project version: Rust `1.88.0`)
+- Microsoft Edge WebView2 Runtime on Windows 10/11
+
+```bash
+git clone https://github.com/favelaimeu-blip/Codex-X-GPT-5.6.git
+cd Codex-X-GPT-5.6
+pnpm install
+pnpm dev
+```
+
+Build desktop bundles:
+
+```bash
+pnpm build
+```
+
+Generate only the Windows executable without an installer bundle:
+
+```powershell
+pnpm --dir apps/desktop exec tauri build --no-bundle
+```
+
+Output path:
+
+```text
+apps/desktop/src-tauri/target/release/codex-x.exe
+```
+
+## Configure GPT-5.6-sol
+
+1. Add an official or third-party OpenAI-compatible service on the **Provider** page.
+2. Enter the Provider Base URL and API Key.
+3. Set the model to `gpt-5.6-sol`.
+4. Set Wire API to `responses`.
+5. Run the connection test and review both connectivity and model-list results.
+6. Enable the `gpt-5.6-sol unrestricted` template on the **Instruction Prompt** page.
+7. Save and switch to the Provider.
+
+The core configuration looks like this:
+
+```toml
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
+model_instructions_file = "./gpt-5.6-sol-unrestricted.md"
+
+[model_providers.your-provider]
+base_url = "https://your-provider.example/v1"
+wire_api = "responses"
+```
+
+Provider names, authentication fields, and Base URLs must match your actual service.
+
+## Data Directories and Upgrades
+
+The production edition directly uses the existing Codex data directories:
+
+```text
+~/.codex/config.toml
+~/.codex/auth.json
+~/.codex/sessions/
+~/.codex/archived_sessions/
+~/.codexx/codexx.db
+```
+
+Existing Providers, prompt settings, and local sessions therefore remain available when upgrading from the upstream Codex-X edition.
+
+The following scripts are only for development and build verification; they are not required to launch the production application:
+
+```text
+scripts/verify-gpt56-isolation.ps1
+scripts/build-gpt56-isolated.ps1
+scripts/start-gpt56-isolated.ps1
+```
+
+## Verified
+
+- TypeScript typecheck
+- Vite renderer production build
+- Cargo check / clippy
+- 52 Rust unit tests
+- Windows release build
+- GPT-5.6-sol model profile and dedicated prompt UI
+- `/models` detection and Responses API recommendations
+- Unicode TOML round trips and legacy prompt-name migration
+
+Local verification commands:
+
+```bash
+pnpm typecheck
+pnpm --dir apps/desktop build:renderer
+cargo test --locked --lib --manifest-path apps/desktop/src-tauri/Cargo.toml
+```
 
 ## Tech Stack
 
@@ -300,72 +192,45 @@ Codex-X now includes a dedicated **Skills & MCP** page for managing Codex capabi
 | Frontend | React 18 / TypeScript / Vite |
 | Backend | Rust |
 | Local data | SQLite / rusqlite |
-| Config editing | TOML / JSON |
-| Release | GitHub Actions / GitHub Releases |
+| Configuration | TOML / JSON / `toml_edit` |
+| Automated releases | GitHub Actions / GitHub Releases |
 
-## Configuration Paths
-
-Codex-X reads the Codex configuration directory by default:
+## Repository Layout
 
 ```text
-~/.codex/config.toml
-~/.codex/auth.json
+apps/desktop/                       Tauri desktop application
+apps/desktop/src/                   React / TypeScript frontend
+apps/desktop/src-tauri/src/         Rust backend
+examples/gpt-5.6-sol-unrestricted.md
+docs/                               Documentation and screenshots
+scripts/                            Build and verification scripts
+GPT56_OPTIMIZATION.md               GPT-5.6-sol optimization notes
 ```
 
-Environment variables are also supported:
+## Releases
 
-```text
-CODEX_HOME=/path/to/.codex
-CODEXX_HOME=/path/to/codex-x-data
-CC_SWITCH_HOME=/path/to/.cc-switch
-```
-
-Codex-X's own database is stored by default at:
-
-```text
-~/.codexx/codexx.db
-```
-
-## Download
-
-Download from the Releases page:
-
-https://github.com/yynxxxxx/Codex-X/releases
-
-## Development
+The `.github/workflows/release.yml` workflow builds cross-platform artifacts and creates a GitHub Release whenever a `v*` tag is pushed.
 
 ```bash
-pnpm install
-pnpm dev
+git tag v0.2.35-gpt5.6.2
+git push origin v0.2.35-gpt5.6.2
 ```
 
-Build desktop bundles:
+## Usage Notes
 
-```bash
-pnpm --dir apps/desktop tauri build
-```
-
-## macOS Installation Note
-
-If you see “app is damaged” when opening an unsigned / unnotarized DMG, this is normal macOS Gatekeeper behavior.
-
-- Best option: sign and notarize with an Apple Developer ID
-- Local testing only: remove the quarantine attribute manually
-
-```bash
-xattr -dr com.apple.quarantine /Applications/Codex-X.app
-```
+- `unrestricted` is the name of an instruction template and UI profile included by this project. It is not an official “unrestricted mode” provided by OpenAI or any Provider.
+- Actual prompt behavior depends on the model, Provider, server-side policies, and client version.
+- Understand the purpose of each setting before changing `config.toml`, `auth.json`, or historical session metadata.
 
 ## License
 
-This project is open-sourced under the [MIT License](https://github.com/yynxxxxx/Codex-X/blob/main/LICENSE).
+This project retains the upstream [MIT License](LICENSE). Derivative changes are also distributed under the MIT License.
 
-## Thanks
+## Credits and Upstream
 
-Thanks to the [LINUX DO forum](https://linux.do/) community for attention, feedback, and support.
+This project is adapted from **Codex-X by yynxxxxx**:
 
-## Star History
+- Upstream project: [yynxxxxx/Codex-X](https://github.com/yynxxxxx/Codex-X)
+- Maintained edition: [favelaimeu-blip/Codex-X-GPT-5.6](https://github.com/favelaimeu-blip/Codex-X-GPT-5.6)
 
-<a href="https://www.star-history.com/?repos=yynxxxxx%2FCodex-X&type=date&legend=top-left">
-  <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=yynxxxxx%2Fcodex-x&amp;type=date&amp;legend=top-left&amp;sealed_token=Vqvz67Jv_WIePGePCN8RdJaY5oCyqqCZUSFWs4M4dAxP8JXFZlYEWbI8YcU6SFgpqOqqJifzpOTIlMg4ee8NaCkHpCSqv1r5pxewR-tQlmxswaZlhedd6A" width="900" />
-</a>
+Thanks to the original author for the Codex-X desktop architecture, Provider management, configuration editor, session synchronization, and cross-platform release foundation, and to all community members who contributed testing, feedback, and improvements.

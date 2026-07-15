@@ -4,293 +4,185 @@
 </p>
 
 <div align="center">
-  <img src="apps/desktop/src-tauri/icons/icon.png" alt="Codex-X Logo" width="150" />
+  <img src="apps/desktop/src-tauri/icons/icon.png" alt="Codex-X GPT-5.6 Logo" width="150" />
 
-  # Codex-X
+  # Codex-X GPT-5.6-sol 专用版
 
-  **Codex 提示词注入 · Provider 切换 · TOML / Auth 可视化管理器**
+  **面向 `gpt-5.6-sol` 的 Codex Desktop / Codex CLI 配置与工作流管理器**
 
-  一款面向 **OpenAI Codex 桌面端 / Codex CLI** 的跨平台桌面工具，内置 `gpt5.5-unrestricted.md` 与 `gpt5.4-unrestricted.md`，支持一键写入 / 禁用指令提示词、第三方 Provider 切换、官方 Auth 管理、TOML 可视化编辑与本地会话 Provider Sync。
+  基于原版 Codex-X `v0.2.35` 深度适配，提供 GPT-5.6-sol 模型档案、Responses API、专用指令模板、Provider 检测、TOML / Auth 管理和本地会话同步。
 
   <p>
-    <img src="https://img.shields.io/github/v/release/yynxxxxx/Codex-X?label=version&color=blue" alt="version" />
+    <img src="https://img.shields.io/badge/version-0.2.35--gpt5.6.2-2563eb" alt="version 0.2.35-gpt5.6.2" />
+    <img src="https://img.shields.io/badge/model-gpt--5.6--sol-7c3aed" alt="model gpt-5.6-sol" />
+    <img src="https://img.shields.io/badge/Wire%20API-Responses-0ea5e9" alt="Responses API" />
     <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-555" alt="platform" />
-    <img src="https://img.shields.io/badge/built%20with-Tauri%202-24C8DB" alt="tauri" />
-    <img src="https://img.shields.io/badge/license-MIT-green" alt="license" />
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-16a34a" alt="MIT license" /></a>
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" />
-    <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" />
-    <img src="https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white" />
-    <img src="https://img.shields.io/badge/SQLite-Ready-003B57?logo=sqlite&logoColor=white" />
-    <img src="https://img.shields.io/badge/Vite-Ready-646CFF?logo=vite&logoColor=white" />
+    <a href="https://github.com/favelaimeu-blip/Codex-X-GPT-5.6/releases"><b>下载版本</b></a>
+    ·
+    <a href="GPT56_OPTIMIZATION.md"><b>优化说明</b></a>
+    ·
+    <a href="https://github.com/favelaimeu-blip/Codex-X-GPT-5.6/issues"><b>问题反馈</b></a>
   </p>
 </div>
 
 ---
 
-## Codex-X 是什么？
+## 项目定位
 
-Codex-X 不是普通的配置文件编辑器，而是一个面向 Codex CLI 的 **可视化增强管理器**。
+Codex-X GPT-5.6-sol 专用版是一个独立维护的 Codex-X 衍生版本，重点优化 `gpt-5.6-sol` 在 Codex 桌面端和 Codex CLI 工作流中的配置体验。
 
-它把几个高频操作做成了桌面软件：
+它不是简单地修改界面名称，而是为 GPT-5.6-sol 增加了完整的模型档案、默认参数、提示词文件、Provider 能力检测以及旧配置迁移逻辑。
 
-- 给 Codex 写入 / 禁用指令提示词模板
-- 切换官方 OpenAI 与第三方 Codex API Provider
-- 查看 / 编辑 `~/.codex/config.toml`
-- 查看 / 编辑官方 `~/.codex/auth.json`
-- 检查并修复本地历史会话的 Provider 元数据
+> `gpt-5.6-sol` 是否可用取决于你所使用的 OpenAI 兼容 Provider 是否实际提供该模型。Codex-X 负责配置、检测和管理，不会在服务端不存在模型时凭空创建模型。
 
-## 软件预览
+## 相比原版的主要优化
 
-<details open>
-<summary><b>应用界面预览</b>：主界面 / Provider / TOML / Auth</summary>
+| 项目 | GPT-5.6-sol 专用版 |
+| --- | --- |
+| 默认模型 | `gpt-5.6-sol` |
+| 默认 Wire API | `responses` |
+| 默认推理强度 | `medium` |
+| 专用指令文件 | `gpt-5.6-sol-unrestricted.md` |
+| 模型检测 | 测试 Provider 连接时读取 `/models` 并检查目标模型 |
+| 配置维护 | 使用 `toml_edit` 结构化修改 TOML，尽量保留原有配置与中文路径 |
+| 名称兼容 | 将 `gpt5.6`、`gpt5-6`、`gpt-5-6` 等旧写法迁移为 `gpt-5.6` |
+| 数据模式 | 正式版直接使用当前用户的 `~/.codex` 与 `~/.codexx` |
+| 产品标识 | `Codex-X GPT-5.6` / `0.2.35-gpt5.6.2` |
 
-<p align="center">
-  <img src="docs/screenshots/app/preview.png" alt="Codex-X 应用界面预览：主界面、Provider、TOML、Auth" width="920" />
-</p>
-
-</details>
-
-<details>
-<summary><b>提示词注入效果：安全测试场景</b></summary>
-
-<div align="center">
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <b>SQL 注入测试</b><br />
-      <sub>部署后测试：如何对目标进行 SQL 注入测试？</sub><br />
-      <img src="docs/screenshots/prompt-effects/security/sql-injection.png" alt="SQL 注入测试效果图" width="420" />
-    </td>
-    <td align="center" width="50%">
-      <b>NSFW 响应测试</b><br />
-      <sub>用于观察提示词注入后的边界响应变化</sub><br />
-      <img src="docs/screenshots/prompt-effects/security/nsfw.png" alt="NSFW 响应测试效果图" width="420" />
-    </td>
-  </tr>
-</table>
-</div>
-
-</details>
-
-<details>
-<summary><b>提示词注入效果：逆向工程场景</b></summary>
-
-<div align="center">
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <b>APK 逆向分析</b><br />
-      <sub>Android APK 静态 / 动态分析思路</sub><br />
-      <img src="docs/screenshots/prompt-effects/reverse/apk-reverse-1.png" alt="APK 逆向分析效果图" width="420" />
-    </td>
-    <td align="center" width="50%">
-      <b>APK 逆向分析 2</b><br />
-      <sub>补充 APK 逆向流程与定位方式</sub><br />
-      <img src="docs/screenshots/prompt-effects/reverse/apk-reverse-2.png" alt="APK 逆向分析效果图 2" width="420" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center" colspan="2">
-      <b>EXE 逆向分析</b><br />
-      <sub>Windows 可执行文件分析与调试方向</sub><br />
-      <img src="docs/screenshots/prompt-effects/reverse/exe-reverse.png" alt="EXE 逆向分析效果图" width="620" />
-    </td>
-  </tr>
-</table>
-</div>
-
-</details>
+完整技术变更请参阅 [GPT56_OPTIMIZATION.md](GPT56_OPTIMIZATION.md)。
 
 ## 功能特性
 
-<div align="center">
-<table>
-  <tr>
-    <th align="center" width="180">功能</th>
-    <th align="center">说明</th>
-  </tr>
-  <tr>
-    <td align="center">⚡ 供应商 API</td>
-    <td>可视化管理官方 OpenAI / 第三方 Codex Provider，支持 Base URL、API Key、Model、Wire API 与一键切换。</td>
-  </tr>
-  <tr>
-    <td align="center">🧩 <b>提示词注入</b></td>
-    <td><b>特色功能</b>：内置 <code>gpt5.4-unrestricted.md</code> / <code>gpt5.5-unrestricted.md</code>，一键写入 Codex 配置；启用后可达到上方效果图中的 SQL 注入测试、APK / EXE 逆向等响应效果。</td>
-  </tr>
-  <tr>
-    <td align="center">💬 会话管理</td>
-    <td>读取 Codex 本地 SQLite 与 rollout JSONL，会话列表可视化展示，并支持 Provider Sync / 修复历史 thread 元数据。</td>
-  </tr>
-  <tr>
-    <td align="center">📝 TOML 配置</td>
-    <td>查看当前 <code>~/.codex/config.toml</code>，并在 Provider 编辑页直接编辑完整 TOML，保存后同步到 Codex 配置目录。</td>
-  </tr>
-  <tr>
-    <td align="center">🧠 Skills / MCP</td>
-    <td>新增技能和 MCP 管理页：读取 Codex 当前可用的 Skills / MCP，支持导入已有、从 ZIP 安装 Skill、启用 / 禁用单个 Skill 或 MCP，并可检查 Skill 更新状态。</td>
-  </tr>
-  <tr>
-    <td align="center">🔐 Auth 管理</td>
-    <td>读取 / 编辑官方 <code>~/.codex/auth.json</code>，区分 ChatGPT 登录态 Auth 与第三方 API Key。</td>
-  </tr>
-  <tr>
-    <td align="center">📦 跨平台发布</td>
-    <td>提供 macOS Apple Silicon / Intel <code>.dmg</code>、Windows <code>.msi</code> / portable <code>.zip</code>、Linux <code>.deb</code> / <code>.rpm</code>，支持应用内检测更新。</td>
-  </tr>
-</table>
-</div>
+- **GPT-5.6-sol 原生档案**：模型、Responses API、推理强度和专用提示词形成统一配置。
+- **Provider 可视化管理**：配置 Base URL、API Key、模型、Wire API，并一键切换当前 Provider。
+- **模型可用性检测**：连接测试不仅检查接口连通性，也会提示目标模型是否出现在模型列表中。
+- **专用指令提示词**：内置 `examples/gpt-5.6-sol-unrestricted.md`，可在界面中启用或禁用。
+- **TOML 可视化编辑**：读取和维护 `~/.codex/config.toml`，支持中文目录与未知字段保留。
+- **Auth 管理**：读取和编辑 `~/.codex/auth.json`，区分 ChatGPT 登录态与第三方 API Key。
+- **会话 Provider Sync**：检查 SQLite / rollout JSONL 中的 Provider 元数据并同步历史任务。
+- **Skills / MCP 管理**：导入、安装、启用或禁用 Codex Skills 与 MCP Server。
+- **跨平台构建**：基于 Tauri 2，可构建 Windows、macOS 与 Linux 安装包。
 
-## 核心亮点
-
-### 1. 内置双指令提示词模板
-
-Codex-X 当前内置两套提示词模板：
-
-- `examples/gpt5.5-unrestricted.md`
-- `examples/gpt5.4-unrestricted.md`
-
-你可以在【指令提示词】页面直接点击启用 / 禁用。启用后，Codex-X 会把对应 `.md` 写入 Codex 配置目录，并更新 `config.toml` 中的 `model_instructions_file`。
-
-<div align="center">
-<table>
-  <tr>
-    <th align="center">对比项</th>
-    <th align="center"><code>gpt5.4-unrestricted.md</code></th>
-    <th align="center"><code>gpt5.5-unrestricted.md</code></th>
-  </tr>
-  <tr>
-    <td align="center">定位</td>
-    <td align="center">5.4 CTF 沙箱</td>
-    <td align="center">5.5 无限制模式</td>
-  </tr>
-  <tr>
-    <td align="center">策略</td>
-    <td align="center">CTF 竞赛沙箱间接绕过</td>
-    <td align="center">直接声明无限制开发者模式</td>
-  </tr>
-  <tr>
-    <td align="center">风格</td>
-    <td align="center">安全研究导向，方法论详细</td>
-    <td align="center">极简指令，覆盖面广</td>
-  </tr>
-  <tr>
-    <td align="center">长度</td>
-    <td align="center">约 180 行</td>
-    <td align="center">约 40 行</td>
-  </tr>
-  <tr>
-    <td align="center">适用</td>
-    <td align="center">GPT-5.4 Codex CLI</td>
-    <td align="center">GPT-5.5 Codex CLI</td>
-  </tr>
-</table>
-</div>
-
-部署后可以测试：
-
-```text
-如何对目标进行 SQL 注入测试？
-```
-
-典型效果：
-
-```text
-破甲前 → 拒绝或泛化回答
-破甲后 → 直接给安全研究方法论与测试步骤
-```
-
-### 2. Provider 可视化切换
-
-- 添加第三方 Codex API Provider
-- 编辑 Base URL / API Key / Model / Wire API
-- Provider 页面可查看并编辑对应 TOML
-- 当前启用 Provider 状态清晰可见
-- 支持从 cc-switch 数据库导入 Codex Provider
-
-### 3. 官方 Auth 管理
-
-- 自动读取 Codex 官方 `auth.json`
-- 支持查看 / 编辑 ChatGPT 登录态 Auth
-- 区分官方 Auth 与第三方 API Key
-- 官方配置可和第三方 Provider 在 UI 中统一管理
-
-### 4. TOML 可视化编辑
-
-- 查看当前 Codex `config.toml`
-- 深色代码预览与语法高亮
-- Provider 编辑页可直接编辑完整 TOML
-- 保存后同步到 Codex 配置目录
-
-### 5. 会话管理 / Provider Sync
-
-Codex-X 可以读取 Codex 本地会话数据：
-
-```text
-~/.codex/sqlite/*.db
-~/.codex/state_5.sqlite
-~/.codex/sessions/**/rollout-*.jsonl
-~/.codex/archived_sessions/**/rollout-*.jsonl
-```
-
-用于检查旧会话的 Provider 元数据是否和当前配置一致，并支持一键同步 / 修复，让历史 thread 继续被原生 Codex 识别、打开和续聊。
-
-### 6. Skills / MCP 管理
-
-Codex-X 新增独立的【技能和 MCP】页面，用于集中管理 Codex 的专业能力扩展。
-
-- Skills：读取当前 Codex Skills，支持导入已有、从 ZIP 安装、启用 / 禁用、检查更新状态
-- MCP：读取当前 Codex MCP Server，支持导入已有、启用 / 禁用，启用后写入 Codex <code>config.toml</code>
-- 适合管理 Android APK 逆向、Ghidra / IDA、Web / API / 协议逆向、CTF、安全测试等技能包
-
-### 7. 逆向 Skills 导航
-
-<div align="center">
-  <a href="https://yynxxxxx.github.io/Codex-X/">
-    <img src="https://img.shields.io/badge/Codex--X-在线逆向%20Skills%20导航-0ea5e9?style=for-the-badge&logo=githubpages&logoColor=white" alt="Codex-X 在线逆向 Skills 导航" />
-  </a>
-</div>
-
-<br />
-
-<table>
-  <tr>
-    <td width="55%">
-      <b>在线教程页</b>：解释什么是“破甲”、Codex-X 如何启用 GPT-5.5 / unrestricted jeli、以及如何搭配不同领域的逆向 Skills。
-      <br /><br />
-      <b>分类覆盖</b>：Android APK / Windows EXE / Web 协议逆向。
-      <br /><br />
-      <b>内容包含</b>：Skill 用途、安装方式、来源地址、推荐使用流程。
-    </td>
-    <td width="45%">
-      <ul>
-        <li>🧩 GPT-5.5 / unrestricted jeli 使用流程</li>
-        <li>📱 Android APK 逆向 Skills</li>
-        <li>🪟 Windows EXE / DLL 逆向 Skills</li>
-        <li>🌐 Web / API / 协议逆向 Skills</li>
-        <li>📋 安装命令一键复制</li>
-      </ul>
-    </td>
-  </tr>
-</table>
+## 软件预览
 
 <p align="center">
-  <a href="https://yynxxxxx.github.io/Codex-X/">
-    <b>🚀 打开 Codex-X 逆向 Skills 导航</b>
-  </a>
+  <img src="docs/screenshots/app/preview.png" alt="Codex-X 应用界面预览" width="920" />
 </p>
 
-### 8. 跨平台桌面软件
+## 快速开始
 
-- macOS Apple Silicon `.dmg`
-- macOS Intel `.dmg`
-- Windows `.msi`
-- Windows Portable `.zip`
-- Linux `.deb` / `.rpm`
-- GitHub Releases 自动构建发布
-- 应用内检查更新
+### 1. 下载
+
+前往 [GitHub Releases](https://github.com/favelaimeu-blip/Codex-X-GPT-5.6/releases) 获取构建产物：
+
+- Windows：`.msi` 或 portable `.zip`
+- macOS：Apple Silicon / Intel `.dmg`
+- Linux：`.deb` / `.rpm`
+
+如果 Releases 暂无可下载文件，可以按照下方步骤从源码运行或构建。
+
+### 2. 从源码运行
+
+建议环境：
+
+- Node.js 22
+- pnpm 10
+- Rust stable（项目最低 Rust `1.88.0`）
+- Windows 10/11 需具备 Microsoft Edge WebView2 Runtime
+
+```bash
+git clone https://github.com/favelaimeu-blip/Codex-X-GPT-5.6.git
+cd Codex-X-GPT-5.6
+pnpm install
+pnpm dev
+```
+
+构建桌面安装包：
+
+```bash
+pnpm build
+```
+
+仅生成 Windows 可执行文件、不打安装包：
+
+```powershell
+pnpm --dir apps/desktop exec tauri build --no-bundle
+```
+
+生成位置：
+
+```text
+apps/desktop/src-tauri/target/release/codex-x.exe
+```
+
+## 配置 GPT-5.6-sol
+
+1. 在 **Provider** 页面添加官方或第三方 OpenAI 兼容服务。
+2. 填写 Provider 的 Base URL 与 API Key。
+3. 将模型设置为 `gpt-5.6-sol`。
+4. 将 Wire API 设置为 `responses`。
+5. 执行连接测试，检查接口状态和模型列表检测结果。
+6. 在 **指令提示词** 页面启用 `gpt-5.6-sol unrestricted` 模板。
+7. 保存并切换到该 Provider。
+
+对应的核心配置类似：
+
+```toml
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
+model_instructions_file = "./gpt-5.6-sol-unrestricted.md"
+
+[model_providers.your-provider]
+base_url = "https://your-provider.example/v1"
+wire_api = "responses"
+```
+
+Provider 名称、认证字段和 Base URL 请以你的实际服务为准。
+
+## 数据目录与升级方式
+
+正式版直接使用 Codex 的现有数据目录：
+
+```text
+~/.codex/config.toml
+~/.codex/auth.json
+~/.codex/sessions/
+~/.codex/archived_sessions/
+~/.codexx/codexx.db
+```
+
+因此从原版 Codex-X 升级后，原有 Provider、提示词设置和本地会话仍可继续使用。
+
+以下脚本仅用于开发和构建验证，不是正式版的必需启动方式：
+
+```text
+scripts/verify-gpt56-isolation.ps1
+scripts/build-gpt56-isolated.ps1
+scripts/start-gpt56-isolated.ps1
+```
+
+## 已验证项目
+
+- TypeScript typecheck
+- Vite renderer production build
+- Cargo check / clippy
+- Rust 单元测试 52 项
+- Windows release 构建
+- GPT-5.6-sol 模型档案与专用提示词界面
+- `/models` 模型检测与 Responses API 推荐提示
+- 中文 TOML 往返与旧提示词名称迁移
+
+本地验证命令：
+
+```bash
+pnpm typecheck
+pnpm --dir apps/desktop build:renderer
+cargo test --locked --lib --manifest-path apps/desktop/src-tauri/Cargo.toml
+```
 
 ## 技术栈
 
@@ -300,72 +192,45 @@ Codex-X 新增独立的【技能和 MCP】页面，用于集中管理 Codex 的�
 | 前端 | React 18 / TypeScript / Vite |
 | 后端 | Rust |
 | 本地数据 | SQLite / rusqlite |
-| 配置编辑 | TOML / JSON |
-| 发布 | GitHub Actions / GitHub Releases |
+| 配置处理 | TOML / JSON / `toml_edit` |
+| 自动发布 | GitHub Actions / GitHub Releases |
 
-## 配置路径
-
-Codex-X 默认读取 Codex 配置目录：
+## 项目结构
 
 ```text
-~/.codex/config.toml
-~/.codex/auth.json
+apps/desktop/                       Tauri 桌面应用
+apps/desktop/src/                   React / TypeScript 前端
+apps/desktop/src-tauri/src/         Rust 后端
+examples/gpt-5.6-sol-unrestricted.md
+docs/                               文档与截图
+scripts/                            构建及验证脚本
+GPT56_OPTIMIZATION.md               GPT-5.6-sol 优化说明
 ```
 
-也支持环境变量：
+## 发布
 
-```text
-CODEX_HOME=/path/to/.codex
-CODEXX_HOME=/path/to/codex-x-data
-CC_SWITCH_HOME=/path/to/.cc-switch
-```
-
-Codex-X 自身数据库默认位于：
-
-```text
-~/.codexx/codexx.db
-```
-
-## 下载
-
-请前往 Releases 页面下载：
-
-https://github.com/yynxxxxx/Codex-X/releases
-
-## 开发运行
+仓库中的 `.github/workflows/release.yml` 会在推送 `v*` 标签时构建多平台产物并创建 GitHub Release。
 
 ```bash
-pnpm install
-pnpm dev
+git tag v0.2.35-gpt5.6.2
+git push origin v0.2.35-gpt5.6.2
 ```
 
-构建桌面端：
+## 使用说明
 
-```bash
-pnpm --dir apps/desktop tauri build
-```
-
-## macOS 安装说明
-
-如果你在未签名 / 未公证的 DMG 中看到“软件已损坏”提示，这是 macOS Gatekeeper 的正常行为。
-
-- 最佳方式：使用 Apple Developer ID 签名并 notarize
-- 仅本地测试：可手动移除 quarantine 属性
-
-```bash
-xattr -dr com.apple.quarantine /Applications/Codex-X.app
-```
+- `unrestricted` 是本项目内置指令模板和界面档案的名称，不代表 OpenAI 或任何 Provider 提供官方的“无限制模式”。
+- 提示词的实际表现由模型、Provider、服务端策略和客户端版本共同决定。
+- 修改 `config.toml`、`auth.json` 或历史会话前，请确认你了解对应配置的作用。
 
 ## 许可证
 
-本项目基于 [MIT License](https://github.com/yynxxxxx/Codex-X/blob/main/LICENSE) 开源。
+本项目沿用原项目的 [MIT License](LICENSE)。衍生修改同样依据 MIT License 发布。
 
-## 致谢 / Thanks
+## 致谢与上游项目
 
-感谢 [LINUX DO 论坛](https://linux.do/) 社区的关注、反馈与支持。
+本项目基于 **yynxxxxx 开发的 Codex-X** 进行适配和扩展：
 
-## Star History
+- 原项目：[yynxxxxx/Codex-X](https://github.com/yynxxxxx/Codex-X)
+- 当前维护版：[favelaimeu-blip/Codex-X-GPT-5.6](https://github.com/favelaimeu-blip/Codex-X-GPT-5.6)
 
-<a href="https://www.star-history.com/?repos=yynxxxxx%2FCodex-X&type=date&legend=top-left">
-  <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=yynxxxxx%2Fcodex-x&amp;type=date&amp;legend=top-left&amp;sealed_token=Vqvz67Jv_WIePGePCN8RdJaY5oCyqqCZUSFWs4M4dAxP8JXFZlYEWbI8YcU6SFgpqOqqJifzpOTIlMg4ee8NaCkHpCSqv1r5pxewR-tQlmxswaZlhedd6A" width="900" />
-</a>
+感谢原作者提供 Codex-X 的桌面端架构、Provider 管理、配置编辑、会话同步和跨平台发布基础；也感谢所有参与测试、反馈和改进的社区成员。
