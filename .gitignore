@@ -30,3 +30,5 @@ apps/desktop/src-tauri/gen/schemas/
 
 # Release artifacts
 release-assets/
+artifacts/
+.verification/

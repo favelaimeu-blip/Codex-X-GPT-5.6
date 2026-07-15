@@ -1,4 +1,5 @@
 use chrono::Local;
+use fs2::FileExt;
 use rusqlite::{params, Connection, OpenFlags, TransactionBehavior};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -149,6 +150,12 @@ struct ProviderConnectionResult {
     status: Option<u16>,
     message: String,
     duration_ms: u128,
+    endpoint: String,
+    model: Option<String>,
+    model_available: Option<bool>,
+    advertised_models: usize,
+    wire_api: Option<String>,
+    warnings: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -475,7 +482,7 @@ fn app_home() -> Result<PathBuf> {
                 return Ok(PathBuf::from(trimmed));
             }
         }
-        Ok(home_dir()?.join(".codexx"))
+        Ok(home_dir()?.join(".codexx-gpt56"))
     }
 }
 
@@ -1099,13 +1106,43 @@ fn delete_provider_inner(id: &str) -> Result<()> {
     Ok(())
 }
 
+fn is_gpt_56_prompt_alias(input: &str) -> bool {
+    let normalized = input.trim().to_ascii_lowercase();
+    let stem = normalized.strip_suffix(".md").unwrap_or(&normalized);
+    matches!(
+        stem,
+        "gpt-5.6-sol-unrestricted"
+            | "gpt5.6-sol-unrestricted"
+            | "gpt5-6-sol-unrestricted"
+            | "gpt-5-6-sol-unrestricted"
+    )
+}
+
+fn canonical_prompt_template_id(input: &str) -> String {
+    if input.trim().is_empty() || is_gpt_56_prompt_alias(input) {
+        DEFAULT_INSTRUCTION_ID.to_string()
+    } else {
+        input.trim().to_string()
+    }
+}
+
 fn normalize_prompt_filename(input: &str, fallback: &str) -> String {
-    let raw = input.trim().trim_end_matches(".md");
+    let normalized = input.trim().to_ascii_lowercase();
+    let raw = normalized.strip_suffix(".md").unwrap_or(&normalized);
     let base = if raw.is_empty() { fallback } else { raw };
+    if is_gpt_56_prompt_alias(base) {
+        return INSTRUCTION_56_FILENAME.to_string();
+    }
     let mut out = String::new();
     let mut last_dash = false;
     for ch in base.to_ascii_lowercase().chars() {
         if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' {
+            out.push(ch);
+            last_dash = false;
+        } else if ch == '.' && !out.is_empty() && !out.ends_with('.') {
+            // Model-oriented prompt names commonly contain semantic dots
+            // (for example gpt-5.6-sol). Preserve them instead of silently
+            // rewriting the visible model identity.
             out.push(ch);
             last_dash = false;
         } else if !last_dash {
@@ -1113,7 +1150,7 @@ fn normalize_prompt_filename(input: &str, fallback: &str) -> String {
             last_dash = true;
         }
     }
-    let out = out.trim_matches('-');
+    let out = out.trim_matches(|ch| ch == '-' || ch == '.');
     format!("{}.md", if out.is_empty() { "custom-prompt" } else { out })
 }
 
@@ -1288,8 +1325,16 @@ struct GithubContentEntry {
     download_url: Option<String>,
 }
 
-fn bundled_prompt_metas() -> [BundledPromptMeta; 3] {
+fn bundled_prompt_metas() -> [BundledPromptMeta; 4] {
     [
+        BundledPromptMeta {
+            id: "gpt-5.6-sol-unrestricted",
+            filename: INSTRUCTION_56_FILENAME,
+            title: "gpt-5.6-sol unrestricted 破甲",
+            subtitle: "GPT-5.6-sol 专用模板（Responses API）",
+            badge: "5.6 推荐",
+            content: INSTRUCTION_56_CONTENT,
+        },
         BundledPromptMeta {
             id: "gpt5.5-unrestricted",
             filename: INSTRUCTION_FILENAME,
@@ -1318,17 +1363,16 @@ fn bundled_prompt_metas() -> [BundledPromptMeta; 3] {
 }
 
 fn bundled_prompt_meta(template_id: &str) -> Option<BundledPromptMeta> {
-    let id = if template_id.trim().is_empty() {
-        "gpt5.5-unrestricted"
-    } else {
-        template_id.trim()
-    };
+    let id = canonical_prompt_template_id(template_id);
     bundled_prompt_metas()
         .into_iter()
-        .find(|item| item.id == id)
+        .find(|item| item.id.eq_ignore_ascii_case(&id))
 }
 
 fn stable_remote_prompt_id(filename: &str) -> String {
+    if is_gpt_56_prompt_alias(filename) {
+        return DEFAULT_INSTRUCTION_ID.to_string();
+    }
     if let Some(meta) = bundled_prompt_metas()
         .into_iter()
         .find(|item| item.filename.eq_ignore_ascii_case(filename))
@@ -1799,13 +1843,9 @@ fn builtin_prompt_content(template_id: &str) -> Result<(String, String, String, 
     let _cache_guard = BUILTIN_PROMPT_CACHE_LOCK
         .lock()
         .map_err(|_| CodexxError::Database("提示词缓存锁已损坏".to_string()))?;
-    let id = if template_id.trim().is_empty() {
-        "gpt5.5-unrestricted"
-    } else {
-        template_id.trim()
-    };
-    let bundled = bundled_prompt_meta(id);
-    let cached = cached_builtin_prompt(id)?;
+    let id = canonical_prompt_template_id(template_id);
+    let bundled = bundled_prompt_meta(&id);
+    let cached = cached_builtin_prompt(&id)?;
     let filename = cached
         .as_ref()
         .map(|item| item.filename.clone())
@@ -1817,7 +1857,7 @@ fn builtin_prompt_content(template_id: &str) -> Result<(String, String, String, 
         .unwrap_or_else(|| builtin_prompt_source_url(&filename));
 
     if let Ok(remote) = fetch_remote_prompt(&source_url) {
-        save_builtin_prompt_cache(id, &filename, &source_url, &remote)?;
+        save_builtin_prompt_cache(&id, &filename, &source_url, &remote)?;
         return Ok((
             filename.clone(),
             format!("./{filename}"),
@@ -1845,6 +1885,9 @@ fn builtin_prompt_content(template_id: &str) -> Result<(String, String, String, 
 }
 
 fn builtin_prompt_id_for_filename(filename: &str) -> Result<Option<String>> {
+    if is_gpt_56_prompt_alias(filename) {
+        return Ok(Some(DEFAULT_INSTRUCTION_ID.to_string()));
+    }
     if let Some(meta) = bundled_prompt_metas()
         .into_iter()
         .find(|item| item.filename.eq_ignore_ascii_case(filename))
@@ -3366,7 +3409,7 @@ fn build_ccswitch_codex_provider(
             row.name.trim().to_string()
         },
         base_url: section.base_url,
-        model: section.model.unwrap_or_else(|| "gpt-5.5".to_string()),
+        model: section.model.unwrap_or_else(|| DEFAULT_MODEL.to_string()),
         api_key,
         toml_config: None,
         wire_api: section.wire_api,
@@ -5183,7 +5226,7 @@ struct SessionMaintenanceLock {
 
 impl Drop for SessionMaintenanceLock {
     fn drop(&mut self) {
-        let _ = self.file.unlock();
+        let _ = FileExt::unlock(&self.file);
     }
 }
 
@@ -5211,7 +5254,7 @@ fn acquire_session_maintenance_lock(codex_dir: &Path) -> Result<SessionMaintenan
         .write(true)
         .open(&path)
         .map_err(|e| io_err(&path, e))?;
-    file.try_lock()
+    FileExt::try_lock_exclusive(&file)
         .map_err(|_| CodexxError::Config(format!("会话维护正在进行: {}", path.display())))?;
     file.set_len(0).map_err(|e| io_err(&path, e))?;
     write!(file, "pid={}\n", std::process::id()).map_err(|e| io_err(&path, e))?;
@@ -5660,7 +5703,7 @@ fn remove_session_history_entries(
         .write(true)
         .open(&path)
         .map_err(|e| io_err(&path, e))?;
-    file.try_lock().map_err(|error| {
+    FileExt::try_lock_exclusive(&file).map_err(|error| {
         CodexxError::Config(format!(
             "历史记录正在被其他 Codex 进程使用，请关闭相关 Codex 窗口或 CLI 后重试: {error}"
         ))
@@ -5680,7 +5723,7 @@ fn remove_session_history_entries(
         }
         Ok(removed)
     })();
-    let _ = file.unlock();
+    let _ = FileExt::unlock(&file);
     result
 }
 
@@ -6398,10 +6441,27 @@ fn sync_sessions_provider_inner(
 
 fn set_top_level_defaults(doc: &mut DocumentMut) {
     if doc.get("model_reasoning_effort").is_none() {
-        doc["model_reasoning_effort"] = value("high");
+        let model = string_value(doc, "model").unwrap_or_else(|| DEFAULT_MODEL.to_string());
+        if let Some(effort) = model_profile_reasoning_effort(&model) {
+            doc["model_reasoning_effort"] = value(effort);
+        }
     }
     if doc.get("disable_response_storage").is_none() {
         doc["disable_response_storage"] = value(true);
+    }
+}
+
+fn model_profile_reasoning_effort(model: &str) -> Option<&'static str> {
+    match model.trim().to_ascii_lowercase().as_str() {
+        "gpt-5.6-sol" => Some("medium"),
+        "gpt-5.5" | "gpt-5.4" => Some("high"),
+        _ => None,
+    }
+}
+
+fn apply_known_model_profile(doc: &mut DocumentMut, model: &str) {
+    if let Some(effort) = model_profile_reasoning_effort(model) {
+        doc["model_reasoning_effort"] = value(effort);
     }
 }
 
@@ -6695,7 +6755,8 @@ fn enable_prompt_content_inner(
     match injection_mode {
         PromptInjectionMode::Replace => {
             if doc.get("model").is_none() {
-                doc["model"] = value("gpt-5.5");
+                doc["model"] = value(DEFAULT_MODEL);
+                apply_known_model_profile(&mut doc, DEFAULT_MODEL);
             }
             doc["model_instructions_file"] = value(format!("./{filename}"));
             write_text(&codex_dir.join(filename), content)?;
@@ -6954,12 +7015,8 @@ fn enable_instruction_inner(
     template_id: &str,
     injection_mode: Option<String>,
 ) -> Result<ActionResult> {
-    let resolved_id = if template_id.trim().is_empty() {
-        "gpt5.5-unrestricted"
-    } else {
-        template_id.trim()
-    };
-    let (filename, _relative, content, content_source) = builtin_prompt_content(resolved_id)?;
+    let resolved_id = canonical_prompt_template_id(template_id);
+    let (filename, _relative, content, content_source) = builtin_prompt_content(&resolved_id)?;
     let mode = PromptInjectionMode::parse(injection_mode.as_deref())?;
     enable_prompt_content_inner(
         config_dir,
@@ -6979,7 +7036,7 @@ async fn enable_instruction(
     injection_mode: Option<String>,
 ) -> Result<ActionResult> {
     tauri::async_runtime::spawn_blocking(move || {
-        enable_instruction_inner(config_dir, "gpt5.5-unrestricted", injection_mode)
+        enable_instruction_inner(config_dir, DEFAULT_INSTRUCTION_ID, injection_mode)
     })
     .await
     .map_err(|e| CodexxError::Config(format!("启用指令提示词失败: {e}")))?
@@ -7169,7 +7226,57 @@ fn provider_test_request(
     .call()
 }
 
-fn provider_status_result(status: u16, duration_ms: u128) -> ProviderConnectionResult {
+fn provider_profile_warnings(model: Option<&str>, wire_api: Option<&str>) -> Vec<String> {
+    let mut warnings = Vec::new();
+    if model
+        .map(str::trim)
+        .is_some_and(|value| value.eq_ignore_ascii_case("gpt-5.6-sol"))
+        && !wire_api
+            .map(str::trim)
+            .is_some_and(|value| value.eq_ignore_ascii_case("responses"))
+    {
+        warnings.push("gpt-5.6-sol 推荐使用 responses wire_api".to_string());
+    }
+    warnings
+}
+
+fn extract_provider_model_ids(body: &str) -> Vec<String> {
+    let Ok(value) = serde_json::from_str::<Value>(body) else {
+        return Vec::new();
+    };
+    let items = if let Some(items) = value.get("data").and_then(Value::as_array) {
+        items
+    } else if let Some(items) = value.get("models").and_then(Value::as_array) {
+        items
+    } else if let Some(items) = value.as_array() {
+        items
+    } else {
+        return Vec::new();
+    };
+    let mut ids = items
+        .iter()
+        .filter_map(|item| {
+            item.as_str().map(str::to_string).or_else(|| {
+                item.get("id")
+                    .or_else(|| item.get("name"))
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+            })
+        })
+        .filter(|id| !id.trim().is_empty())
+        .collect::<Vec<_>>();
+    ids.sort_unstable();
+    ids.dedup();
+    ids
+}
+
+fn provider_status_result(
+    status: u16,
+    duration_ms: u128,
+    endpoint: String,
+    model: Option<String>,
+    wire_api: Option<String>,
+) -> ProviderConnectionResult {
     ProviderConnectionResult {
         ok: (200..300).contains(&status),
         status: Some(status),
@@ -7181,12 +7288,67 @@ fn provider_status_result(status: u16, duration_ms: u128) -> ProviderConnectionR
             format!("HTTP {status} · {duration_ms} ms")
         },
         duration_ms,
+        endpoint,
+        warnings: provider_profile_warnings(model.as_deref(), wire_api.as_deref()),
+        model,
+        model_available: None,
+        advertised_models: 0,
+        wire_api,
+    }
+}
+
+fn provider_models_result(
+    status: u16,
+    duration_ms: u128,
+    endpoint: String,
+    body: &str,
+    model: Option<String>,
+    wire_api: Option<String>,
+) -> ProviderConnectionResult {
+    let model_ids = extract_provider_model_ids(body);
+    let model_available = model.as_deref().and_then(|requested| {
+        if model_ids.is_empty() {
+            None
+        } else {
+            Some(
+                model_ids
+                    .iter()
+                    .any(|candidate| candidate.eq_ignore_ascii_case(requested.trim())),
+            )
+        }
+    });
+    let http_ok = (200..300).contains(&status);
+    let ok = http_ok && model_available != Some(false);
+    let message = if !http_ok {
+        if status == 401 || status == 403 {
+            format!("HTTP {status} · {duration_ms} ms（认证失败或无权限）")
+        } else {
+            format!("HTTP {status} · {duration_ms} ms")
+        }
+    } else if model_available == Some(false) {
+        format!("HTTP {status} · {duration_ms} ms（目标模型未在 /models 中列出）")
+    } else {
+        format!("{duration_ms} ms")
+    };
+    ProviderConnectionResult {
+        ok,
+        status: Some(status),
+        message,
+        duration_ms,
+        endpoint,
+        warnings: provider_profile_warnings(model.as_deref(), wire_api.as_deref()),
+        model,
+        model_available,
+        advertised_models: model_ids.len(),
+        wire_api,
     }
 }
 
 fn test_provider_connection_inner(
     base_url: String,
     api_key: Option<String>,
+    model: Option<String>,
+    wire_api: Option<String>,
 ) -> Result<ProviderConnectionResult> {
     let base = base_url.trim().trim_end_matches('/').to_string();
     if base.is_empty() {
@@ -7207,18 +7369,27 @@ fn test_provider_connection_inner(
 
     match provider_test_request(&agent, &models_url, api_key) {
         Ok(response) => {
-            return Ok(provider_status_result(
-                response.status(),
+            let status = response.status();
+            let body = response.into_string().unwrap_or_default();
+            Ok(provider_models_result(
+                status,
                 started.elapsed().as_millis(),
+                models_url,
+                &body,
+                model,
+                wire_api,
             ))
         }
         Err(ureq::Error::Status(status, _)) => {
             // /models exists but rejected the request. This is not a successful
             // provider test; notably HTTP 403 must not be shown as “连接正常”.
-            return Ok(provider_status_result(
+            Ok(provider_status_result(
                 status,
                 started.elapsed().as_millis(),
-            ));
+                models_url,
+                model,
+                wire_api,
+            ))
         }
         Err(_models_error) => {
             // Network-level failure on /models: try the base endpoint once so
@@ -7228,16 +7399,28 @@ fn test_provider_connection_inner(
                 Ok(response) => Ok(provider_status_result(
                     response.status(),
                     started.elapsed().as_millis(),
+                    base,
+                    model,
+                    wire_api,
                 )),
                 Err(ureq::Error::Status(status, _)) => Ok(provider_status_result(
                     status,
                     started.elapsed().as_millis(),
+                    base,
+                    model,
+                    wire_api,
                 )),
                 Err(_base_error) => Ok(ProviderConnectionResult {
                     ok: false,
                     status: None,
                     message: format!("请求失败 · {} ms", started.elapsed().as_millis()),
                     duration_ms: started.elapsed().as_millis(),
+                    endpoint: base,
+                    warnings: provider_profile_warnings(model.as_deref(), wire_api.as_deref()),
+                    model,
+                    model_available: None,
+                    advertised_models: 0,
+                    wire_api,
                 }),
             }
         }
@@ -7248,10 +7431,14 @@ fn test_provider_connection_inner(
 async fn test_provider_connection(
     base_url: String,
     api_key: Option<String>,
+    model: Option<String>,
+    wire_api: Option<String>,
 ) -> Result<ProviderConnectionResult> {
-    tauri::async_runtime::spawn_blocking(move || test_provider_connection_inner(base_url, api_key))
-        .await
-        .map_err(|e| CodexxError::Config(format!("测试连接失败: {e}")))?
+    tauri::async_runtime::spawn_blocking(move || {
+        test_provider_connection_inner(base_url, api_key, model, wire_api)
+    })
+    .await
+    .map_err(|e| CodexxError::Config(format!("测试连接失败: {e}")))?
 }
 
 fn switch_provider_with_pre_persist<F>(input: ProviderInput, pre_persist: F) -> Result<ActionResult>
@@ -7288,6 +7475,7 @@ where
     let mut doc = parse_toml_document(&cfg, &text)?;
     doc["model_provider"] = value(live_provider_key);
     doc["model"] = value(model);
+    apply_known_model_profile(&mut doc, model);
     set_top_level_defaults(&mut doc);
 
     let root = doc.as_table_mut();
@@ -8170,7 +8358,7 @@ experimental_bearer_token = "sk-same"
             .map(|status| status.filename.to_ascii_lowercase())
             .collect::<HashSet<_>>();
 
-        assert_eq!(statuses.len(), 4);
+        assert_eq!(statuses.len(), bundled_prompt_metas().len() + 1);
         assert_eq!(ids.len(), statuses.len());
         assert_eq!(filenames.len(), statuses.len());
         assert!(statuses.iter().any(|status| status.filename == "new.md"));
@@ -8442,6 +8630,62 @@ description: Keep long investigations aligned.
     }
 
     #[test]
+    fn switch_provider_applies_known_reasoning_profile_and_preserves_unknown() {
+        let codex_dir = temp_codex_dir("switch-provider-reasoning-profile");
+        write_text(
+            &config_path(&codex_dir),
+            "model_reasoning_effort = \"xhigh\"\n",
+        )
+        .expect("seed config");
+
+        switch_provider_inner(ProviderInput {
+            config_dir: Some(codex_dir.display().to_string()),
+            _provider_id: Some("gpt56".to_string()),
+            provider_name: "GPT 5.6 Provider".to_string(),
+            base_url: "https://example.com/v1".to_string(),
+            model: "gpt-5.6-sol".to_string(),
+            api_key: None,
+            wire_api: Some("responses".to_string()),
+            requires_openai_auth: Some(false),
+        })
+        .expect("switch to known model");
+        let known = fs::read_to_string(config_path(&codex_dir))
+            .expect("read known config")
+            .parse::<DocumentMut>()
+            .expect("parse known config");
+        assert_eq!(
+            string_value(&known, "model_reasoning_effort").as_deref(),
+            Some("medium")
+        );
+
+        let mut unknown_seed = known;
+        unknown_seed["model_reasoning_effort"] = value("xhigh");
+        write_text(&config_path(&codex_dir), &unknown_seed.to_string())
+            .expect("seed unknown config");
+        switch_provider_inner(ProviderInput {
+            config_dir: Some(codex_dir.display().to_string()),
+            _provider_id: Some("vendor".to_string()),
+            provider_name: "Vendor Provider".to_string(),
+            base_url: "https://vendor.example.com/v1".to_string(),
+            model: "vendor-experimental".to_string(),
+            api_key: None,
+            wire_api: Some("responses".to_string()),
+            requires_openai_auth: Some(false),
+        })
+        .expect("switch to unknown model");
+        let unknown = fs::read_to_string(config_path(&codex_dir))
+            .expect("read unknown config")
+            .parse::<DocumentMut>()
+            .expect("parse unknown config");
+        assert_eq!(
+            string_value(&unknown, "model_reasoning_effort").as_deref(),
+            Some("xhigh")
+        );
+
+        let _ = fs::remove_dir_all(codex_dir);
+    }
+
+    #[test]
     fn switch_provider_persists_detected_custom_before_overwrite() {
         let codex_dir = temp_codex_dir("switch-provider-persist-current");
         write_text(
@@ -8617,10 +8861,158 @@ requires_openai_auth = true
 
     #[test]
     fn provider_status_403_is_not_ok() {
-        let result = provider_status_result(403, 123);
+        let result = provider_status_result(
+            403,
+            123,
+            "https://example.com/v1/models".to_string(),
+            Some("gpt-5.6-sol".to_string()),
+            Some("responses".to_string()),
+        );
         assert!(!result.ok);
         assert_eq!(result.status, Some(403));
         assert_eq!(result.duration_ms, 123);
+    }
+
+    #[test]
+    fn provider_model_catalog_detects_gpt_56_sol() {
+        let result = provider_models_result(
+            200,
+            42,
+            "https://example.com/v1/models".to_string(),
+            r#"{"data":[{"id":"gpt-5.5"},{"id":"gpt-5.6-sol"}]}"#,
+            Some("gpt-5.6-sol".to_string()),
+            Some("responses".to_string()),
+        );
+        assert!(result.ok);
+        assert_eq!(result.model_available, Some(true));
+        assert_eq!(result.advertised_models, 2);
+        assert!(result.warnings.is_empty());
+    }
+
+    #[test]
+    fn provider_model_catalog_reports_missing_model_and_wire_warning() {
+        let result = provider_models_result(
+            200,
+            42,
+            "https://example.com/v1/models".to_string(),
+            r#"{"models":[{"name":"gpt-5.5"}]}"#,
+            Some("gpt-5.6-sol".to_string()),
+            Some("chat".to_string()),
+        );
+        assert!(!result.ok);
+        assert_eq!(result.model_available, Some(false));
+        assert_eq!(result.warnings.len(), 1);
+    }
+
+    #[test]
+    fn gpt_56_sol_profile_uses_medium_reasoning() {
+        assert_eq!(
+            model_profile_reasoning_effort("gpt-5.6-sol"),
+            Some("medium")
+        );
+        assert_eq!(model_profile_reasoning_effort("gpt-5.5"), Some("high"));
+        assert_eq!(model_profile_reasoning_effort("gpt-5.4"), Some("high"));
+        assert_eq!(model_profile_reasoning_effort("custom-model"), None);
+
+        let mut default_doc = DocumentMut::new();
+        set_top_level_defaults(&mut default_doc);
+        assert_eq!(
+            string_value(&default_doc, "model_reasoning_effort").as_deref(),
+            Some("medium")
+        );
+
+        let mut legacy_doc = "model = \"gpt-5.5\""
+            .parse::<DocumentMut>()
+            .expect("legacy config");
+        set_top_level_defaults(&mut legacy_doc);
+        assert_eq!(
+            string_value(&legacy_doc, "model_reasoning_effort").as_deref(),
+            Some("high")
+        );
+
+        let mut known_switch = "model_reasoning_effort = \"xhigh\""
+            .parse::<DocumentMut>()
+            .expect("known switch config");
+        apply_known_model_profile(&mut known_switch, "gpt-5.6-sol");
+        assert_eq!(
+            string_value(&known_switch, "model_reasoning_effort").as_deref(),
+            Some("medium")
+        );
+
+        let mut unknown_switch = "model_reasoning_effort = \"xhigh\""
+            .parse::<DocumentMut>()
+            .expect("unknown switch config");
+        apply_known_model_profile(&mut unknown_switch, "vendor-experimental");
+        assert_eq!(
+            string_value(&unknown_switch, "model_reasoning_effort").as_deref(),
+            Some("xhigh")
+        );
+    }
+
+    #[test]
+    fn prompt_filename_preserves_model_version_dots() {
+        assert_eq!(
+            normalize_prompt_filename("gpt-5.6-sol-unrestricted.md", "prompt"),
+            "gpt-5.6-sol-unrestricted.md"
+        );
+        assert_eq!(
+            normalize_prompt_filename(" GPT-5.6 SOL unrestricted.md ", "prompt"),
+            "gpt-5.6-sol-unrestricted.md"
+        );
+        assert_eq!(
+            normalize_prompt_filename("GPT-5.6-SOL-UNRESTRICTED.MD", "prompt"),
+            "gpt-5.6-sol-unrestricted.md"
+        );
+        for legacy in [
+            "gpt5.6-sol-unrestricted",
+            "gpt5-6-sol-unrestricted.md",
+            "gpt-5-6-sol-unrestricted.md",
+        ] {
+            assert_eq!(
+                normalize_prompt_filename(legacy, "prompt"),
+                INSTRUCTION_56_FILENAME
+            );
+            assert_eq!(canonical_prompt_template_id(legacy), DEFAULT_INSTRUCTION_ID);
+            assert_eq!(
+                builtin_prompt_id_for_filename(legacy).expect("legacy prompt lookup"),
+                Some(DEFAULT_INSTRUCTION_ID.to_string())
+            );
+        }
+    }
+
+    #[test]
+    fn empty_prompt_selection_uses_gpt_56_sol_template() {
+        let meta = bundled_prompt_meta("").expect("default bundled prompt");
+        assert_eq!(meta.id, DEFAULT_INSTRUCTION_ID);
+        assert_eq!(meta.filename, INSTRUCTION_56_FILENAME);
+    }
+
+    #[test]
+    fn toml_roundtrip_preserves_chinese_project_paths() {
+        let source = r#"model = "gpt-5.6-sol"
+
+[projects."d:\\projects\\星露谷"]
+trust_level = "trusted"
+"#;
+        let doc = parse_toml_document(Path::new("config.toml"), source).expect("parse toml");
+        let rendered = doc.to_string();
+        assert!(rendered.contains("星露谷"));
+        let reparsed =
+            parse_toml_document(Path::new("config.toml"), &rendered).expect("reparse toml");
+        assert_eq!(
+            string_value(&reparsed, "model").as_deref(),
+            Some("gpt-5.6-sol")
+        );
+        let project = reparsed
+            .get("projects")
+            .and_then(Item::as_table)
+            .and_then(|projects| projects.get(r"d:\projects\星露谷"))
+            .and_then(Item::as_table)
+            .expect("Chinese project table");
+        assert_eq!(
+            project.get("trust_level").and_then(Item::as_str),
+            Some("trusted")
+        );
     }
 
     #[test]

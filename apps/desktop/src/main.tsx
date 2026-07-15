@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import "./styles.css";
+import { DEFAULT_MODEL_ID, MODEL_PROFILES, findModelProfile, modelProfile, reasoningEffortForModel } from "./modelProfiles";
 
 type Lang = "zh" | "en";
 type ProviderMode = "list" | "form" | "official";
@@ -169,6 +170,17 @@ type ProviderConnectionResult = {
   status?: number | null;
   message: string;
   durationMs: number;
+  endpoint: string;
+  model?: string | null;
+  modelAvailable?: boolean | null;
+  advertisedModels: number;
+  wireApi?: string | null;
+  warnings: string[];
+};
+
+type ProviderProbeRecord = ProviderConnectionResult & {
+  checkedAt: number;
+  requestKey: string;
 };
 
 
@@ -291,6 +303,13 @@ const FALLBACK_GITHUB_REPO = "yynxxxxx/Codex-X";
 
 const bundledInstructionTemplates: InstructionTemplate[] = [
   {
+    id: "gpt-5.6-sol-unrestricted",
+    filename: "gpt-5.6-sol-unrestricted.md",
+    title: "GPT-5.6-sol 专用执行配置",
+    subtitle: "Responses API · 隔离验证 · 编码代理工作流",
+    badge: "5.6 专用",
+  },
+  {
     id: "gpt5.5-unrestricted",
     filename: "gpt5.5-unrestricted.md",
     title: "gpt-5.5 unrestricted 破甲",
@@ -322,7 +341,7 @@ const defaultProviderForm: SavedProvider = {
   id: "magicai",
   providerName: "MagicAI",
   baseUrl: "https://sky1818.com",
-  model: "gpt-5.5",
+  model: DEFAULT_MODEL_ID,
   apiKey: "",
   tomlConfig: "",
   wireApi: "responses",
@@ -333,7 +352,7 @@ const blankProviderForm: SavedProvider = {
   id: "",
   providerName: "",
   baseUrl: "",
-  model: "gpt-5.5",
+  model: DEFAULT_MODEL_ID,
   apiKey: "",
   tomlConfig: "",
   wireApi: "responses",
@@ -627,6 +646,82 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function ModelInput({
+  value,
+  onChange,
+  lang,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  lang: Lang;
+}) {
+  const profile = modelProfile(value);
+  const matchedProfile = findModelProfile(value);
+  return (
+    <div className="model-input-control">
+      <input
+        list="codex-model-profiles"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={DEFAULT_MODEL_ID}
+        autoComplete="off"
+      />
+      <datalist id="codex-model-profiles">
+        {MODEL_PROFILES.map((item) => <option key={item.id} value={item.id}>{item.displayName}</option>)}
+      </datalist>
+      <div className="model-recommendations" aria-label={lang === "zh" ? "推荐模型" : "Recommended models"}>
+        {MODEL_PROFILES.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={cx("model-chip", matchedProfile?.id === item.id && "selected", item.recommended && "recommended")}
+            onClick={() => onChange(item.id)}
+            title={lang === "zh" ? item.descriptionZh : item.descriptionEn}
+          >
+            {item.displayName}{item.recommended ? <span>{lang === "zh" ? "推荐" : "Recommended"}</span> : null}
+          </button>
+        ))}
+      </div>
+      <small className={cx("field-hint", matchedProfile && "known-model")}>{lang === "zh" ? profile.descriptionZh : profile.descriptionEn}</small>
+    </div>
+  );
+}
+
+function providerProbeLabel(result: ProviderConnectionResult, lang: Lang) {
+  if (!result.ok) return lang === "zh" ? "检测失败" : "Check failed";
+  if (result.modelAvailable === true) return lang === "zh" ? `${result.model || "目标模型"} 可用` : `${result.model || "Target model"} available`;
+  if (result.modelAvailable === false) return lang === "zh" ? `未找到 ${result.model || "目标模型"}` : `${result.model || "Target model"} not found`;
+  if (result.advertisedModels > 0) return lang === "zh" ? `发现 ${result.advertisedModels} 个模型` : `${result.advertisedModels} models found`;
+  return lang === "zh" ? "连接正常，未返回模型目录" : "Connected; no model catalog";
+}
+
+function providerProbeDetails(result: ProviderConnectionResult, lang: Lang) {
+  const parts = [
+    result.message,
+    result.endpoint,
+    result.wireApi ? `wire_api: ${result.wireApi}` : "",
+    result.advertisedModels > 0
+      ? (lang === "zh" ? `/models 共 ${result.advertisedModels} 个模型` : `${result.advertisedModels} models advertised by /models`)
+      : "",
+    ...(result.warnings || []),
+  ];
+  return parts.filter(Boolean).join("\n");
+}
+
+function ProviderProbePill({ result, lang }: { result: ProviderProbeRecord; lang: Lang }) {
+  const tone = !result.ok || result.modelAvailable === false
+    ? "error"
+    : result.modelAvailable === true
+      ? "ok"
+      : "neutral";
+  return (
+    <span className={cx("provider-probe-pill", `provider-probe-${tone}`)} title={providerProbeDetails(result, lang)}>
+      {tone === "ok" ? <CheckCircle2 size={13} /> : tone === "error" ? <AlertCircle size={13} /> : <Info size={13} />}
+      {providerProbeLabel(result, lang)}
+    </span>
+  );
+}
+
 function StatCard({ icon, label, value, ok }: { icon: React.ReactNode; label: string; value: React.ReactNode; ok?: boolean }) {
   return (
     <div className="stat-card">
@@ -754,20 +849,28 @@ function providerIdentityKey(baseUrl?: string | null, apiKey?: string | null, pr
   ]);
 }
 
+function providerProbeRequestKey(baseUrl?: string | null, model?: string | null, wireApi?: string | null) {
+  return JSON.stringify([
+    normalizeProviderBaseUrl(baseUrl),
+    (model || "").trim().toLowerCase(),
+    (wireApi || "").trim().toLowerCase(),
+  ]);
+}
+
 function buildProviderTomlPreview(provider: SavedProvider, state: CodexState | null) {
-  const model = provider.model.trim() || "gpt-5.5";
+  const model = provider.model.trim() || DEFAULT_MODEL_ID;
+  const profile = modelProfile(model);
   const name = provider.providerName.trim() || "your-provider";
   // Codex live config follows cc-switch: all third-party providers are applied as `custom`.
   const providerKey = "custom";
   const baseUrl = provider.baseUrl.trim().replace(/\/+$/, "") || "https://example.com/v1";
-  const wireApi = provider.wireApi || "responses";
+  const wireApi = provider.wireApi || profile.wireApi;
   const apiKey = provider.apiKey?.trim();
   const source = state?.configText?.trimEnd() || "";
   const sourceLines = source ? source.split("\n") : [];
   const keptLines: string[] = [];
   let currentSection = "";
   let skippingCustomProvider = false;
-  let hasReasoningEffort = false;
 
   for (const line of sourceLines) {
     const sectionMatch = line.match(/^\s*\[([^\]]+)]\s*$/);
@@ -781,8 +884,7 @@ function buildProviderTomlPreview(provider: SavedProvider, state: CodexState | n
     if (!currentSection) {
       const keyMatch = line.match(/^\s*([A-Za-z0-9_-]+)\s*=/);
       const key = keyMatch?.[1];
-      if (key === "model_provider" || key === "model") continue;
-      if (key === "model_reasoning_effort") hasReasoningEffort = true;
+      if (key === "model_provider" || key === "model" || key === "model_reasoning_effort") continue;
     }
     keptLines.push(line);
   }
@@ -800,10 +902,8 @@ function buildProviderTomlPreview(provider: SavedProvider, state: CodexState | n
   const headerLines = [
     `model_provider = "${tomlEscape(providerKey)}"`,
     `model = "${tomlEscape(model)}"`,
+    `model_reasoning_effort = "${reasoningEffortForModel(model)}"`,
   ];
-  if (!hasReasoningEffort) {
-    headerLines.push('model_reasoning_effort = "high"');
-  }
 
   const providerLines = [
     `[model_providers.${providerKey}]`,
@@ -1040,11 +1140,12 @@ function App() {
   const [providerTomlDirty, setProviderTomlDirty] = React.useState(false);
   const [providerApiKeyVisible, setProviderApiKeyVisible] = React.useState(false);
   const [providerTestingId, setProviderTestingId] = React.useState("");
+  const [providerProbeResults, setProviderProbeResults] = React.useState<Record<string, ProviderProbeRecord>>({});
   const [actionBusy, setActionBusy] = React.useState<string>("");
   const [promptSyncing, setPromptSyncing] = React.useState(false);
   const [promptCatalogReady, setPromptCatalogReady] = React.useState(false);
   const [promptForm, setPromptForm] = React.useState<SavedPrompt>(blankPromptForm);
-  const [officialForm, setOfficialForm] = React.useState({ model: "gpt-5.5", authJson: "" });
+  const [officialForm, setOfficialForm] = React.useState({ model: DEFAULT_MODEL_ID, authJson: "" });
   const [promptModeHelpOpen, setPromptModeHelpOpen] = React.useState(false);
   const autoUpdateCheckedRef = React.useRef(false);
   const autoSessionSyncRanRef = React.useRef(false);
@@ -1071,8 +1172,16 @@ function App() {
     if (!builtinPromptStatus.length) return bundledInstructionTemplates;
     return builtinPromptStatus
       .filter((item) => item.contentSource !== "removed" || item.id === activeBuiltinTemplateId)
-      .map(({ id, filename, title, subtitle, badge }) => ({ id, filename, title, subtitle, badge }));
-  }, [activeBuiltinTemplateId, builtinPromptStatus]);
+      .map(({ id, filename, title, subtitle, badge }) => id === "gpt-5.6-sol-unrestricted"
+        ? {
+          id,
+          filename,
+          title: lang === "zh" ? "GPT-5.6-sol 专用执行配置" : "GPT-5.6-sol dedicated execution profile",
+          subtitle: lang === "zh" ? "Responses API · 隔离验证 · 编码代理工作流" : "Responses API · isolated validation · coding-agent workflow",
+          badge: lang === "zh" ? "5.6 专用" : "5.6 native",
+        }
+        : { id, filename, title, subtitle, badge });
+  }, [activeBuiltinTemplateId, builtinPromptStatus, lang]);
   const missingActiveBuiltinTemplateId = activeBuiltinTemplateId
     && !instructionTemplates.some((item) => item.id === activeBuiltinTemplateId)
     ? activeBuiltinTemplateId
@@ -1239,7 +1348,7 @@ function App() {
         source: "detected" as const,
         providerName: p.name || p.id,
         baseUrl: p.baseUrl || "",
-        model: state?.model || "gpt-5.5",
+        model: state?.model || DEFAULT_MODEL_ID,
         apiKey,
         wireApi: p.wireApi || "responses",
         requiresOpenaiAuth: p.requiresOpenaiAuth ?? false,
@@ -1738,14 +1847,38 @@ function App() {
       },
     );
 
-  const testProvider = async (id: string, baseUrl: string, apiKey?: string | null) => {
+  const testProvider = async (
+    id: string,
+    baseUrl: string,
+    apiKey?: string | null,
+    model?: string | null,
+    wireApi?: string | null,
+  ) => {
     setProviderTestingId(id);
     setError("");
     try {
-      const result = await invoke<ProviderConnectionResult>("test_provider_connection", { baseUrl, apiKey: apiKey || null });
-      setToast(result.ok
-        ? (lang === "zh" ? `连接正常\n${result.durationMs} ms` : `Connection OK\n${result.durationMs} ms`)
-        : (lang === "zh" ? `连接失败\n${result.message}` : `Connection failed\n${result.message}`));
+      const result = await invoke<ProviderConnectionResult>("test_provider_connection", {
+        baseUrl,
+        apiKey: apiKey || null,
+        model: model || null,
+        wireApi: wireApi || null,
+      });
+      const normalized: ProviderProbeRecord = {
+        ...result,
+        endpoint: result.endpoint || baseUrl,
+        advertisedModels: result.advertisedModels || 0,
+        warnings: result.warnings || [],
+        checkedAt: Date.now(),
+        requestKey: providerProbeRequestKey(baseUrl, model, wireApi),
+      };
+      setProviderProbeResults((current) => ({ ...current, [id]: normalized }));
+      const summary = providerProbeLabel(normalized, lang);
+      const details = providerProbeDetails(normalized, lang);
+      if (normalized.ok) {
+        setToast(`${lang === "zh" ? "供应商检测完成" : "Provider check complete"}\n${summary}\n${details}`);
+      } else {
+        setError(`${summary}\n${details}`);
+      }
     } catch (e) {
       setError(String(e));
     } finally {
@@ -1976,7 +2109,7 @@ function App() {
     const candidate = await invoke<OfficialAuthCandidate | null>("read_ccswitch_official_auth", { dbPath: null });
     if (candidate) {
       setOfficialForm({
-        model: candidate.model || state?.model || "gpt-5.5",
+        model: candidate.model || state?.model || DEFAULT_MODEL_ID,
         authJson: candidate.authJson,
       });
       if (showToast) setToast(t.provider.officialAuthLoaded);
@@ -1993,7 +2126,7 @@ function App() {
     setState(next);
     setOfficialForm((form) => ({
       ...form,
-      model: next.model || form.model || "gpt-5.5",
+      model: next.model || form.model || DEFAULT_MODEL_ID,
       authJson: next.authText || officialAuthPlaceholder,
     }));
     if (showToast) setToast(t.provider.officialAuthRefreshed);
@@ -2001,7 +2134,7 @@ function App() {
 
   const openOfficialEdit = () => {
     setOfficialForm({
-      model: state?.model || "gpt-5.5",
+      model: state?.model || DEFAULT_MODEL_ID,
       authJson: state?.authText || officialAuthPlaceholder,
     });
     setProviderMode("official");
@@ -2174,6 +2307,12 @@ function App() {
     ["settings", t.nav.settings, <Settings size={18} />],
     ["about", t.nav.about, <Info size={18} />],
   ];
+  const providerFormProbeResult = providerProbeResults["provider-form"];
+  const providerFormProbeIsCurrent = providerFormProbeResult?.requestKey === providerProbeRequestKey(
+    providerForm.baseUrl,
+    providerForm.model,
+    providerForm.wireApi,
+  );
 
   const toastLayer = toast ? (() => {
     const [title, ...rest] = toast.split("\n");
@@ -2233,7 +2372,7 @@ function App() {
           <header className="topbar glass">
             <div>
               <p className="eyebrow">{t.manager}</p>
-              <h2>{state?.model || "gpt-5.5"}</h2>
+              <h2>{state?.model || DEFAULT_MODEL_ID}</h2>
             </div>
             <div className="path-box">
               <span>CODEX_HOME</span>
@@ -2562,6 +2701,8 @@ function App() {
                       <div className="provider-row-list">
                         {providerRows.length === 0 && <p className="empty">{t.provider.noProviders}</p>}
                         {providerRows.map((p) => {
+                          const probeId = `${p.source}-${p.id}`;
+                          const probeResult = providerProbeResults[probeId];
                           const local = p.source === "official"
                             ? undefined
                             : canonicalSavedProviders.find((item) =>
@@ -2589,12 +2730,13 @@ function App() {
                               </div>
                               <div className="provider-badges">
                                 {p.isCurrent && <StatusPill active label={t.provider.current} />}
+                                {probeResult && probeResult.requestKey === providerProbeRequestKey(p.baseUrl, p.model, p.wireApi) && <ProviderProbePill result={probeResult} lang={lang} />}
                               </div>
                               <div className="provider-actions">
                                 <button className="secondary-btn small" onClick={() => switchable ? switchProvider(switchable) : switchOfficialProvider()} disabled={loading || p.isCurrent}>{lang === "zh" ? "启用" : "Enable"}</button>
                                 {p.source !== "official" && (
-                                  <button className="icon-btn small" title={lang === "zh" ? "测试连接" : "Test connection"} onClick={() => void testProvider(`${p.source}-${p.id}`, p.baseUrl, local?.apiKey || p.apiKey || null)} disabled={loading || providerTestingId === `${p.source}-${p.id}`}>
-                                    {providerTestingId === `${p.source}-${p.id}` ? <Loader2 size={15} className="spin" /> : <Activity size={15} />}
+                                  <button className="icon-btn small" title={lang === "zh" ? "测试连接与模型可用性" : "Test connection and model availability"} onClick={() => void testProvider(probeId, p.baseUrl, local?.apiKey || p.apiKey || null, p.model, p.wireApi)} disabled={loading || providerTestingId === probeId}>
+                                    {providerTestingId === probeId ? <Loader2 size={15} className="spin" /> : <Activity size={15} />}
                                   </button>
                                 )}
                                 {p.source === "official" && <button className="icon-btn small" title={t.provider.edit} onClick={openOfficialEdit}><PencilLine size={15} /></button>}
@@ -2625,7 +2767,7 @@ function App() {
                       <div><span>{t.provider.current}</span><code>{(!state.modelProvider || state.modelProvider === "openai") ? "OpenAI Official" : state.modelProvider}</code></div>
                     </div>
                     <div className="form-grid provider-form-grid">
-                      <Field label={t.provider.model}><input value={officialForm.model} onChange={(e) => setOfficialForm({ ...officialForm, model: e.target.value })} /></Field>
+                      <Field label={t.provider.model}><ModelInput lang={lang} value={officialForm.model} onChange={(model) => setOfficialForm({ ...officialForm, model })} /></Field>
                     </div>
                     <label className="field official-auth-field">
                       <span>auth.json (JSON)</span>
@@ -2655,6 +2797,15 @@ function App() {
                             <strong>{lang === "zh" ? "供应商 API 配置" : "Provider API config"}</strong>
                             <p>{lang === "zh" ? "和 cc-switch 一样，API 信息、auth.json、config.toml 在同一个编辑页纵向展示。" : "API fields, auth.json and config.toml are shown vertically in one edit page."}</p>
                           </div>
+                          <button
+                            type="button"
+                            className="secondary-btn small provider-probe-button"
+                            onClick={() => void testProvider("provider-form", providerForm.baseUrl, providerForm.apiKey || null, providerForm.model, providerForm.wireApi)}
+                            disabled={!providerForm.baseUrl.trim() || providerTestingId === "provider-form"}
+                          >
+                            {providerTestingId === "provider-form" ? <Loader2 size={15} className="spin" /> : <Activity size={15} />}
+                            {lang === "zh" ? "检测 /models" : "Check /models"}
+                          </button>
                         </div>
                         <div className="form-grid provider-form-grid provider-form-cc">
                           <Field label={t.provider.apiKey}>
@@ -2677,7 +2828,10 @@ function App() {
                           </Field>
                           <Field label={lang === "zh" ? "API 请求地址" : t.provider.baseUrl}><input value={providerForm.baseUrl} onChange={(e) => setProviderForm({ ...providerForm, baseUrl: e.target.value })} /></Field>
                           <Field label={t.provider.name}><input value={providerForm.providerName} onChange={(e) => setProviderForm({ ...providerForm, providerName: e.target.value, id: editingProviderId || customProviderId(e.target.value) })} /></Field>
-                          <Field label={t.provider.model}><input value={providerForm.model} onChange={(e) => setProviderForm({ ...providerForm, model: e.target.value })} /></Field>
+                          <Field label={t.provider.model}><ModelInput lang={lang} value={providerForm.model} onChange={(model) => {
+                            const profile = findModelProfile(model);
+                            setProviderForm({ ...providerForm, model, ...(profile ? { wireApi: profile.wireApi } : {}) });
+                          }} /></Field>
                           <Field label={t.provider.wireApi}>
                             <select value={providerForm.wireApi} onChange={(e) => setProviderForm({ ...providerForm, wireApi: e.target.value })}>
                               <option value="responses">responses</option>
@@ -2686,6 +2840,24 @@ function App() {
                           </Field>
                           <label className="check-row"><input type="checkbox" checked={providerForm.requiresOpenaiAuth} onChange={(e) => setProviderForm({ ...providerForm, requiresOpenaiAuth: e.target.checked })} /><span>{t.provider.requiresAuth}</span></label>
                         </div>
+                        {providerFormProbeResult && providerFormProbeIsCurrent && (
+                          <div className={cx(
+                            "provider-probe-card",
+                            (!providerFormProbeResult.ok || providerFormProbeResult.modelAvailable === false)
+                              ? "error"
+                              : providerFormProbeResult.modelAvailable === true
+                                ? "ok"
+                                : "neutral",
+                          )}>
+                            <ProviderProbePill result={providerFormProbeResult} lang={lang} />
+                            <div>
+                              <strong>{providerFormProbeResult.message}</strong>
+                              <span>{providerFormProbeResult.endpoint}</span>
+                              {providerFormProbeResult.warnings.length > 0 && <span>{providerFormProbeResult.warnings.join("；")}</span>}
+                            </div>
+                            <code>{providerFormProbeResult.durationMs} ms{providerFormProbeResult.advertisedModels > 0 ? ` · ${providerFormProbeResult.advertisedModels} models` : ""}</code>
+                          </div>
+                        )}
                       </section>
 
                       <section className="provider-section provider-auth-section unified-section">

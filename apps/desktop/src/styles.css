@@ -161,6 +161,7 @@ input, select, textarea {
   outline: none;
 }
 .field input, .field select { height: 44px; padding: 0 13px; }
+.field-hint { color: #7f91ad; font-size: 12px; line-height: 1.45; }
 .field input:focus, .field select:focus, .path-box:focus-within, textarea:focus { border-color: rgba(18,211,255,.44); box-shadow: 0 0 0 3px rgba(18,211,255,.1); }
 .check-row { display: flex; align-items: center; gap: 10px; height: 42px; }
 .check-row input { width: 18px; height: 18px; accent-color: #12d3ff; }
@@ -3075,4 +3076,149 @@ html, body, #root {
 .session-compact-summary.needs-sync .session-summary-status,
 .session-compact-summary .session-summary-warning {
   color: #d8ad65;
+}
+
+/* Native model profiles: keep free-form model IDs while making the supported
+   GPT-5.6-sol profile discoverable without relying on WebView datalist UI. */
+.model-input-control {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+.field .model-input-control > input {
+  width: 100%;
+}
+.model-recommendations {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.model-chip {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border-radius: 999px;
+  color: #9eabc0;
+  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.085);
+  font-size: 11px;
+  font-weight: 800;
+  transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+}
+.model-chip:hover {
+  color: #edf5ff;
+  background: rgba(124,168,255,.10);
+  border-color: rgba(124,168,255,.25);
+}
+.model-chip.selected {
+  color: #bdf7e4;
+  background: rgba(35, 220, 159, .10);
+  border-color: rgba(35, 220, 159, .28);
+}
+.model-chip.recommended:not(.selected) {
+  color: #a9dfff;
+  border-color: rgba(74, 177, 255, .20);
+}
+.field .model-chip span {
+  color: inherit;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.075);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .02em;
+}
+.field-hint.known-model {
+  color: #91c7bd;
+}
+
+/* /models capability checks remain visible after the transient toast closes. */
+.provider-probe-pill {
+  min-width: 0;
+  max-width: 220px;
+  min-height: 25px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 850;
+  border: 1px solid rgba(255,255,255,.10);
+}
+.provider-probe-pill svg {
+  flex: 0 0 auto;
+}
+.provider-probe-ok {
+  color: #7ff0c5;
+  background: rgba(35, 220, 159, .09);
+  border-color: rgba(35, 220, 159, .24);
+}
+.provider-probe-error {
+  color: #ff9eb1;
+  background: rgba(255, 84, 120, .09);
+  border-color: rgba(255, 84, 120, .24);
+}
+.provider-probe-neutral {
+  color: #a8d9ff;
+  background: rgba(64, 158, 255, .09);
+  border-color: rgba(64, 158, 255, .22);
+}
+.provider-probe-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.provider-probe-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 11px 12px;
+  border-radius: 14px;
+  background: rgba(5, 13, 29, .45);
+  border: 1px solid rgba(255,255,255,.09);
+}
+.provider-probe-card.ok { border-color: rgba(35, 220, 159, .20); }
+.provider-probe-card.error { border-color: rgba(255, 84, 120, .22); }
+.provider-probe-card.neutral { border-color: rgba(64, 158, 255, .20); }
+.provider-probe-card > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.provider-probe-card strong {
+  color: #e7effd;
+  font-size: 12px;
+}
+.provider-probe-card span:not(.provider-probe-pill) {
+  color: #8495b1;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.provider-probe-card code {
+  color: #9ccbf1;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+@media (max-width: 1180px) {
+  .provider-probe-card {
+    grid-template-columns: 1fr auto;
+  }
+  .provider-probe-card > .provider-probe-pill {
+    grid-column: 1 / -1;
+    max-width: none;
+    justify-self: start;
+  }
 }

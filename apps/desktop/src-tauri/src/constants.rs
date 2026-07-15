@@ -1,3 +1,10 @@
+pub(crate) const DEFAULT_MODEL: &str = "gpt-5.6-sol";
+pub(crate) const DEFAULT_INSTRUCTION_ID: &str = "gpt-5.6-sol-unrestricted";
+
+pub(crate) const INSTRUCTION_56_FILENAME: &str = "gpt-5.6-sol-unrestricted.md";
+pub(crate) const INSTRUCTION_56_CONTENT: &str =
+    include_str!("../../../../examples/gpt-5.6-sol-unrestricted.md");
+
 pub(crate) const INSTRUCTION_FILENAME: &str = "gpt5.5-unrestricted.md";
 pub(crate) const INSTRUCTION_CONTENT: &str =
     include_str!("../../../../examples/gpt5.5-unrestricted.md");

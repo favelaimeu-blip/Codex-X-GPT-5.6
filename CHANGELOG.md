@@ -2,6 +2,24 @@
 
 All notable changes to Codex-X will be documented here.
 
+## [v0.2.35-gpt56.1] - 2026-07-15
+
+### GPT-5.6-sol 原生适配
+
+- 新增集中式模型配置档案，将 `gpt-5.6-sol` 设为本分支默认模型，并提供 GPT-5.5、GPT-5.4 与自定义模型兼容入口。
+- GPT-5.6-sol 默认使用 Responses API 和 `medium` 推理强度，供应商表单、官方配置和 TOML 预览统一采用模型档案中的默认值。
+- 内置 `gpt-5.6-sol-unrestricted.md` 专用提示词，并修复提示词文件名规范化时错误移除模型版本点号的问题。
+- 供应商连接检测增加 `/models` 模型目录解析、目标模型可用性、Wire API、检测端点和警告信息；HTTP 401/403 等非成功状态不再被误判为可用。
+- 增加 GPT-5.6-sol 推理默认值、模型目录、提示词文件名、中文项目路径 TOML 往返和独立数据目录等回归测试。
+
+### 独立运行与构建
+
+- 产品名改为 `Codex-X GPT56`，应用标识改为 `com.yynxxxxx.codexx.gpt56`，应用数据默认目录改为 `~/.codexx-gpt56`，与原版 Codex-X 分离。
+- 新增 `scripts/start-gpt56-isolated.ps1`，通过进程级 `CODEX_HOME` 和 `CODEXX_HOME` 启动独立便携版，不修改系统环境变量。
+- 新增 `scripts/verify-gpt56-isolation.ps1`，验证产品身份、版本同步、GPT-5.6-sol 配置、临时数据目录、TypeScript/Rust 测试和构建产物哈希。
+- 新增 `scripts/build-gpt56-isolated.ps1`，默认使用 `D:\codex_playground\.toolchains` 下的 Rust 工具链，在临时 Codex 数据目录中完成验证和构建，并生成 portable 文件夹与 ZIP。
+- 新增 `GPT56_OPTIMIZATION.md`，记录功能清单、隔离边界、构建、验证、使用和删除方法。
+
 ## [v0.2.35] - 2026-07-13
 
 ### 更新

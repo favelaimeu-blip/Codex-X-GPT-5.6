@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Codex-X",
-  "version": "0.2.35",
-  "identifier": "com.yynxxxxx.codexx",
+  "productName": "Codex-X GPT56",
+  "version": "0.2.35-gpt56.1",
+  "identifier": "com.yynxxxxx.codexx.gpt56",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://127.0.0.1:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Codex-X",
+        "title": "Codex-X GPT56",
         "width": 1400,
         "height": 750,
         "minWidth": 1320,

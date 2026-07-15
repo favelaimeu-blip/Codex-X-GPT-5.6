@@ -1,11 +1,11 @@
 [package]
 name = "codex-x"
-version = "0.2.35"
+version = "0.2.35-gpt56.1"
 description = "Codex Switch & Instruct desktop manager"
 authors = ["yynxxxxx"]
 license = "MIT"
 edition = "2021"
-rust-version = "1.85.0"
+rust-version = "1.88.0"
 
 [lib]
 name = "codexx_lib"
@@ -21,6 +21,7 @@ serde_json = "1.0"
 toml_edit = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
 dirs = "5.0"
+fs2 = "0.4"
 thiserror = "2.0"
 rusqlite = { version = "0.31", features = ["bundled"] }
 ureq = { version = "2.12", features = ["tls"] }
