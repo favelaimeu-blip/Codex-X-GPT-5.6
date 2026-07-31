@@ -27,6 +27,7 @@ All notable changes to Codex-X will be documented here.
 - 新增 push / pull request CI，持续验证 TypeScript、渲染器生产构建、Rust 格式与 52 项单元测试。
 - 修复 Release 手动触发可能把 `main` 当成发布标签的问题；发布前强制校验现有标签与应用版本完全一致。
 - 新增 CodeQL、Dependabot、私密漏洞报告说明、贡献指南、行为准则以及 Issue / Pull Request 模板。
+- 修复 TOML 预览字符串高亮正则可能出现指数级回溯的问题，消除 CodeQL 报告的正则拒绝服务风险。
 
 ## [v0.2.35] - 2026-07-13
 

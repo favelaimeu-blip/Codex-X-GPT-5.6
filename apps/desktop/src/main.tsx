@@ -978,11 +978,11 @@ function JsonPreview({ text }: { text: string }) {
 }
 
 function renderTomlValue(value: string, lineKey: string) {
-  const parts = value.split(/("(?:\\.|[^"])*")/g);
+  const parts = value.split(/("(?:\\.|[^"\\])*")/g);
   return parts.map((part, index) => {
     if (!part) return null;
     const key = `${lineKey}-v-${index}`;
-    if (/^"(?:\\.|[^"])*"$/.test(part)) {
+    if (/^"(?:\\.|[^"\\])*"$/.test(part)) {
       return <span className="toml-string" key={key}>{part}</span>;
     }
     const boolParts = part.split(/\b(true|false)\b/g);
