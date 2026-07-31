@@ -7,7 +7,11 @@ updates:
       day: monday
       time: '04:00'
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    groups:
+      github-actions:
+        patterns:
+          - '*'
 
   - package-ecosystem: npm
     directory: /
@@ -16,7 +20,7 @@ updates:
       day: monday
       time: '04:15'
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     groups:
       npm-minor-and-patch:
         patterns:
@@ -24,6 +28,10 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: cargo
     directory: /apps/desktop/src-tauri
@@ -32,7 +40,7 @@ updates:
       day: monday
       time: '04:30'
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     groups:
       cargo-minor-and-patch:
         patterns:
@@ -40,3 +48,7 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major
