@@ -130,6 +130,32 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare MSI-compatible Windows version
+        if: matrix.platform == 'windows-latest'
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const { version } = require('./apps/desktop/package.json');
+          const [core, ...prereleaseParts] = version.split('-');
+          const digits = prereleaseParts.join('-').replace(/\D/g, '');
+          let windowsVersion = core;
+
+          if (digits) {
+            const numericPrerelease = Number(digits);
+            if (!Number.isSafeInteger(numericPrerelease) || numericPrerelease > 65535) {
+              throw new Error(`Windows MSI prerelease version '${digits}' must be at most 65535`);
+            }
+            windowsVersion = `${core}-${numericPrerelease}`;
+          }
+
+          fs.writeFileSync(
+            'apps/desktop/src-tauri/tauri.windows.conf.json',
+            `${JSON.stringify({ version: windowsVersion }, null, 2)}\n`,
+          );
+          console.log(`Using MSI-compatible Windows version ${windowsVersion} for ${version}`);
+          NODE
+
       - name: Build Tauri bundles
         run: pnpm --dir apps/desktop tauri build ${{ matrix.args }}
 
