@@ -5,17 +5,60 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to rebuild (for example, v0.2.35-gpt5.6.2)
+        required: true
+        type: string
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 defaults:
   run:
     shell: bash
 
 jobs:
+  prepare:
+    name: Validate release tag
+    runs-on: ubuntu-22.04
+    outputs:
+      release_tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+      - name: Validate tag and application version
+        id: release
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          expected_tag="v${version}"
+
+          if [ "$RELEASE_TAG" != "$expected_tag" ]; then
+            echo "Release tag '$RELEASE_TAG' does not match application version '$expected_tag'." >&2
+            exit 1
+          fi
+
+          if ! git rev-parse --quiet --verify "refs/tags/${RELEASE_TAG}^{commit}" >/dev/null; then
+            echo "Release tag '$RELEASE_TAG' does not exist in the repository." >&2
+            exit 1
+          fi
+
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build ${{ matrix.name }}
+    needs: prepare
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
@@ -51,6 +94,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_tag }}
 
       - name: Install Linux dependencies
         if: matrix.platform == 'ubuntu-22.04'
@@ -150,13 +195,17 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: build
+    needs:
+      - prepare
+      - build
     runs-on: ubuntu-22.04
     permissions:
       contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.release_tag }}
 
       - name: Download bundle artifacts
         uses: actions/download-artifact@v4
@@ -166,13 +215,15 @@ jobs:
 
       - name: Prepare release notes
         id: release_notes
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import os
           import re
 
-          tag = os.environ["GITHUB_REF_NAME"]
+          tag = os.environ["RELEASE_TAG"]
           text = Path("CHANGELOG.md").read_text(encoding="utf-8")
           match = re.search(
               rf"^## \[{re.escape(tag)}\].*?\n(.*?)(?=^## \[|\Z)",
@@ -189,14 +240,15 @@ jobs:
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF_NAME}"
+          tag="${RELEASE_TAG}"
           title="Codex-X ${tag}"
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release edit "$tag" --title "$title" --notes-file release-body.md --latest
           else
-            gh release create "$tag" --title "$title" --notes-file release-body.md --latest
+            gh release create "$tag" --verify-tag --title "$title" --notes-file release-body.md --latest
           fi
           mapfile -t assets < <(find release-assets -type f \( -name '*.dmg' -o -name '*.msi' -o -name '*.deb' -o -name '*.rpm' -o -name '*.zip' \) -print | sort)
           if [ "${#assets[@]}" -eq 0 ]; then

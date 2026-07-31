@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/favelaimeu-blip/Codex-X-GPT-5.6/security/advisories/new
+    about: Report security vulnerabilities privately. Do not include secrets in a public issue.

@@ -22,6 +22,12 @@ All notable changes to Codex-X will be documented here.
 - 新增 `scripts/build-gpt56-isolated.ps1`，默认使用 `D:\codex_playground\.toolchains` 下的 Rust 工具链，在临时 Codex 数据目录中完成验证和构建，并生成 portable 文件夹与 ZIP。
 - 新增 `GPT56_OPTIMIZATION.md`，记录功能清单、直接升级方式、构建和验证方法。
 
+### 发布与仓库治理
+
+- 新增 push / pull request CI，持续验证 TypeScript、渲染器生产构建、Rust 格式与 52 项单元测试。
+- 修复 Release 手动触发可能把 `main` 当成发布标签的问题；发布前强制校验现有标签与应用版本完全一致。
+- 新增 CodeQL、Dependabot、私密漏洞报告说明、贡献指南、行为准则以及 Issue / Pull Request 模板。
+
 ## [v0.2.35] - 2026-07-13
 
 ### 更新
