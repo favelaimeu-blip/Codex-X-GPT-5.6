@@ -25,5 +25,5 @@ fs2 = "0.4"
 thiserror = "2.0"
 rusqlite = { version = "0.31", features = ["bundled"] }
 ureq = { version = "2.12", features = ["tls"] }
-sha2 = "0.10"
+sha2 = "0.11"
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
