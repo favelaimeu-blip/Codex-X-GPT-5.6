@@ -23,7 +23,7 @@ chrono = { version = "0.4", features = ["serde"] }
 dirs = "5.0"
 fs2 = "0.4"
 thiserror = "2.0"
-rusqlite = { version = "0.31", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 ureq = { version = "2.12", features = ["tls"] }
 sha2 = "0.10"
 zip = { version = "2.2", default-features = false, features = ["deflate"] }
